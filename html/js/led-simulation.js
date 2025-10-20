@@ -1,6 +1,6 @@
 // LED simulation for the user interface
 class LEDSimulation {
-  constructor(ledCount = 50, ringCount = 5) {
+  constructor(ledCount = 30, ringCount = 10) {
     this.ledCount = ledCount;
     this.ringCount = ringCount;
     this.leds = [];
@@ -37,7 +37,8 @@ class LEDSimulation {
         led.dataset.index = index;
 
         // Calculate position around the circle
-        const angle = (i / this.ledCount) * 2 * Math.PI - Math.PI / 2; // Start from top
+        const angle =
+          ((i + (j % 2) / 2) / this.ledCount) * 2 * Math.PI - Math.PI / 2; // Start from top
         const x = centerX + radius * Math.cos(angle);
         const y = centerY + radius * Math.sin(angle);
 

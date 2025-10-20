@@ -77,17 +77,48 @@ header h1 {
 
 .user-interface {
     display: grid;
-    gap: 30px;
+    gap: 40px;
     grid-template-columns: 1fr;
 }
 
-@media (min-width: 1024px) {
-    .user-interface {
-        grid-template-columns: 1fr 1fr;
+.main-content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .main-content-wrapper {
+        grid-template-columns: 1fr;
+        gap: 35px;
     }
 
-    .explanation-section {
-        grid-column: 1 / -1;
+    .led-circle {
+        max-width: 450px;
+        height: 450px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .user-interface {
+        gap: 50px;
+    }
+
+    .main-content-wrapper {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 20px;
+    }
+
+    .formula-section {
+        max-width: none;
+    }
+
+    .simulation-section {
+        position: sticky;
+        top: 20px;
+        min-height: 600px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
     }
 }
 
@@ -95,6 +126,7 @@ header h1 {
 .formula-section,
 .simulation-section,
 .history-section {
+    margin-top: 20px;
     background: rgba(255, 255, 255, 0.1);
     padding: 25px;
     border-radius: 15px;
@@ -348,7 +380,8 @@ button {
 }
 
 .led-circle {
-    width: 400px;
+    width: 100%;
+    max-width: 400px;
     height: 400px;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -359,6 +392,14 @@ button {
         rgba(255, 255, 255, 0.1) 0%,
         transparent 70%
     );
+}
+
+@media (min-width: 1200px) {
+    .led-circle {
+        width: 100%;
+        max-width: 50vh;
+        height: 50vh;
+    }
 }
 
 .led {
@@ -489,9 +530,18 @@ button {
         flex-direction: column;
     }
 
+    .dropdown-container {
+        width: 100%;
+    }
+
+    .dropdown-container select {
+        flex: 1;
+        min-width: auto;
+    }
+
     .led-circle {
-        width: 250px;
-        height: 250px;
+        max-width: 280px;
+        height: 280px;
     }
 
     .led {
