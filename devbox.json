@@ -4,21 +4,12 @@
     "which":    "latest",
     "rustup":   "latest",
     "libiconv": "latest",
-    "darwin.apple_sdk.frameworks.CoreServices": {
-      "platforms": ["x86_64-darwin", "aarch64-darwin"]
-    },
-    "darwin.apple_sdk.frameworks.SystemConfiguration": {
-      "platforms": ["x86_64-darwin", "aarch64-darwin"]
-    },
-    "darwin.apple_sdk.frameworks.Security": {
-      "platforms": ["x86_64-darwin", "aarch64-darwin"]
-    },
     "cargo-binstall": "latest"
   },
   "shell": {
     "init_hook": [
-      "if [ ! -d $RUSTUP_HOME/toolchains/stable* ]; then rustup default stable; fi",
-      "if [ ! -d $RUSTUP_HOME/toolchains/stable*/lib/rustlib/wasm32-unknown-unknown ]; then rustup target add wasm32-unknown-unknown; fi",
+      "if ! find $RUSTUP_HOME/toolchains -name stable; then rustup default stable; fi",
+      "if ! find $RUSTUP_HOME/toolchains -name wasm32-unknown-unknown; then rustup target add wasm32-unknown-unknown; fi",
       "test -f .devbox/bin/dx || cargo binstall -y --root=.devbox dioxus-cli",
       "alias ls='ls --color'"
     ],

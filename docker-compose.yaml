@@ -1,19 +1,19 @@
 version: "3.8"
 
 services:
-  livequiz:
-    image: ghcr.io/ineiti/circle_led:latest
+  ledhat:
+    image: ghcr.io/c4dt/led_hat:latest
     build: .
     ports:
       - 8080:8080
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.livequiz.rule=Host(`circle.gasser.blue`)"
-      - "traefik.http.routers.livequiz.entrypoints=websecure"
-      - "traefik.http.routers.livequiz.tls.certresolver=myresolver"
-      - "traefik.http.services.livequiz.loadbalancer.server.port=8080"
+      - "traefik.http.routers.ledhat.rule=Host(`hat.c4dt.org`)"
+      - "traefik.http.routers.ledhat.entrypoints=websecure"
+      - "traefik.http.routers.ledhat.tls.certresolver=myresolver"
+      - "traefik.http.services.ledhat.loadbalancer.server.port=8080"
       - "com.centurylinklabs.watchtower.enable=true"
-      - "traefik.http.routers.livequiz.service=livequiz"
+      - "traefik.http.routers.ledhat.service=ledhat"
     networks:
       - traefik
 

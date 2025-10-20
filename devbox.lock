@@ -49,48 +49,6 @@
         }
       }
     },
-    "darwin.apple_sdk.frameworks.CoreServices": {
-      "resolved": "github:NixOS/nixpkgs/75a52265bda7fd25e06e3a67dee3f0354e73243c#darwin.apple_sdk.frameworks.CoreServices",
-      "source": "nixpkg",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "path": "/nix/store/j343fncqfbb6wdlrwj6dnfmvx4hi1zki-apple-framework-CoreServices-11.0.0",
-              "default": true
-            }
-          ]
-        }
-      }
-    },
-    "darwin.apple_sdk.frameworks.Security": {
-      "resolved": "github:NixOS/nixpkgs/75a52265bda7fd25e06e3a67dee3f0354e73243c#darwin.apple_sdk.frameworks.Security",
-      "source": "nixpkg",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "path": "/nix/store/9jbhn62ld50znjqxll0q5gq9i4disc1s-apple-framework-Security-11.0.0",
-              "default": true
-            }
-          ]
-        }
-      }
-    },
-    "darwin.apple_sdk.frameworks.SystemConfiguration": {
-      "resolved": "github:NixOS/nixpkgs/75a52265bda7fd25e06e3a67dee3f0354e73243c#darwin.apple_sdk.frameworks.SystemConfiguration",
-      "source": "nixpkg",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "path": "/nix/store/jaxmz1dvsz8il7nkxwzw8xfxac3sfz5v-apple-framework-SystemConfiguration-11.0.0",
-              "default": true
-            }
-          ]
-        }
-      }
-    },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
       "last_modified": "2025-07-31T04:07:16Z",
       "resolved": "github:NixOS/nixpkgs/8679b16e11becd487b45d568358ddf9d5640d860?lastModified=1753934836&narHash=sha256-G06FmIBj0I5bMW1Q8hAEIl5N7IHMK7%2BTa4KA%2BBmneDA%3D"

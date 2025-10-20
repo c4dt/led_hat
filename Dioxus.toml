@@ -1,12 +1,12 @@
 [application]
 
 # App (Project) Name
-name = "circle_led"
+name = "led_hat"
 
 [web.app]
 
 # HTML title tag content
-title = "circle_led"
+title = "led_hat"
 
 # include `assets` in web platform
 [web.resource]
