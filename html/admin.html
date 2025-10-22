@@ -1,89 +1,138 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LED Hat - Admin Interface</title>
-    <link rel="stylesheet" href="css/admin.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>LED Hat Admin Interface</h1>
-            <div id="status" class="status-indicator">
-                <span id="status-text">Checking status...</span>
-            </div>
-        </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LED Hat - Admin Interface</title>
+        <link rel="stylesheet" href="css/admin.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>LED Hat Admin Interface</h1>
+                <div id="status" class="status-indicator">
+                    <span id="status-text">Checking status...</span>
+                </div>
+            </header>
 
-        <div class="auth-section" id="auth-section">
-            <h2>Admin Authentication</h2>
-            <div class="form-group">
-                <label for="admin-secret">Admin Secret:</label>
-                <input type="password" id="admin-secret" placeholder="Enter admin secret">
-                <button id="auth-btn" onclick="authenticate()">Authenticate</button>
+            <div class="auth-section" id="auth-section">
+                <h2>Admin Authentication</h2>
+                <div class="form-group">
+                    <label for="admin-secret">Admin Secret:</label>
+                    <input
+                        type="password"
+                        id="admin-secret"
+                        placeholder="Enter admin secret"
+                    />
+                    <button id="auth-btn" onclick="authenticate()">
+                        Authenticate
+                    </button>
+                </div>
+                <div id="auth-error" class="error-message"></div>
             </div>
-            <div id="auth-error" class="error-message"></div>
+
+            <div class="admin-panel" id="admin-panel" style="display: none">
+                <div class="countdown-section">
+                    <h2>Countdown Timer Control</h2>
+                    <div class="current-timer">
+                        <h3>Current Status:</h3>
+                        <div id="timer-display" class="timer-display">
+                            <span id="time-remaining">--:--</span>
+                            <span id="timer-status">No timer active</span>
+                        </div>
+                    </div>
+
+                    <div class="timer-controls">
+                        <h3>Set Timer:</h3>
+                        <div class="button-group">
+                            <button
+                                class="timer-btn"
+                                onclick="setCountdown(15)"
+                            >
+                                15' Countdown
+                            </button>
+                            <button
+                                class="timer-btn"
+                                onclick="setCountdown(30)"
+                            >
+                                30' Countdown
+                            </button>
+                        </div>
+
+                        <div class="custom-timer">
+                            <input
+                                type="number"
+                                id="custom-minutes"
+                                placeholder="Minutes"
+                                min="1"
+                                max="180"
+                            />
+                            <button
+                                class="timer-btn"
+                                onclick="setCustomCountdown()"
+                            >
+                                Set Custom
+                            </button>
+                        </div>
+
+                        <div class="button-group">
+                            <button
+                                class="timer-btn reset"
+                                onclick="resetCountdown()"
+                            >
+                                Reset Countdown
+                            </button>
+                            <button
+                                class="timer-btn access"
+                                onclick="enableUserAccess()"
+                            >
+                                Enable User Access
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="system-section">
+                    <h2>System Control</h2>
+                    <div class="button-group">
+                        <button class="system-btn" onclick="viewLogs()">
+                            View Logs
+                        </button>
+                        <button class="system-btn" onclick="clearHistory()">
+                            Clear Formula History
+                        </button>
+                        <button class="system-btn" onclick="restartSystem()">
+                            Restart System
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h2>Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Active Connections:</span>
+                            <span id="active-connections" class="stat-value"
+                                >0</span
+                            >
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Formulas Today:</span>
+                            <span id="formulas-today" class="stat-value"
+                                >0</span
+                            >
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">System Uptime:</span>
+                            <span id="system-uptime" class="stat-value"
+                                >--:--:--</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="admin-panel" id="admin-panel" style="display: none;">
-            <div class="countdown-section">
-                <h2>Countdown Timer Control</h2>
-                <div class="current-timer">
-                    <h3>Current Status:</h3>
-                    <div id="timer-display" class="timer-display">
-                        <span id="time-remaining">--:--</span>
-                        <span id="timer-status">No timer active</span>
-                    </div>
-                </div>
-
-                <div class="timer-controls">
-                    <h3>Set Timer:</h3>
-                    <div class="button-group">
-                        <button class="timer-btn" onclick="setCountdown(15)">15' Countdown</button>
-                        <button class="timer-btn" onclick="setCountdown(30)">30' Countdown</button>
-                    </div>
-
-                    <div class="custom-timer">
-                        <input type="number" id="custom-minutes" placeholder="Minutes" min="1" max="180">
-                        <button class="timer-btn" onclick="setCustomCountdown()">Set Custom</button>
-                    </div>
-
-                    <div class="button-group">
-                        <button class="timer-btn reset" onclick="resetCountdown()">Reset Countdown</button>
-                        <button class="timer-btn access" onclick="enableUserAccess()">Enable User Access</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="system-section">
-                <h2>System Control</h2>
-                <div class="button-group">
-                    <button class="system-btn" onclick="viewLogs()">View Logs</button>
-                    <button class="system-btn" onclick="clearHistory()">Clear Formula History</button>
-                    <button class="system-btn" onclick="restartSystem()">Restart System</button>
-                </div>
-            </div>
-
-            <div class="stats-section">
-                <h2>Statistics</h2>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-label">Active Connections:</span>
-                        <span id="active-connections" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Formulas Today:</span>
-                        <span id="formulas-today" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">System Uptime:</span>
-                        <span id="system-uptime" class="stat-value">--:--:--</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/admin.js"></script>
-</body>
+        <script src="js/admin.js"></script>
+    </body>
 </html>

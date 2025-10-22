@@ -10,6 +10,8 @@ Following https://keepachangelog.com/en/1.1.0/ and using
 
 ## Added
 
+- HTML for writing formulas
+
 ## Changed
 
 - renamed circle_led to led_hat

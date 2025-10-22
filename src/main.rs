@@ -1,284 +1,53 @@
-use std::time::Duration;
+use axum::{
+    http::StatusCode,
+    response::Json,
+    routing::{get, post},
+    Router,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tower_http::services::ServeDir;
 
-use async_std::task::sleep;
-use common::LED_COUNT;
-use dioxus::prelude::*;
-use tracing::Level;
-
-use crate::common::Game;
-use crate::games::{drop::Drop, snake::Snake};
-
-mod common;
-
-mod display;
-mod games;
-#[cfg(feature = "server")]
-mod server;
-
-#[derive(Debug, Clone, Routable, PartialEq)]
-#[rustfmt::skip]
-enum Route {
-    #[route("/")]
-    Home {},
-    #[route("/reset")]
-    Reset {},
-    #[route("/display")]
-    Display {},
-    #[route("/:..route")]
-    PageNotFound { route: Vec<String> },
+#[derive(Debug, Serialize, Deserialize)]
+struct LedData {
+    leds: Vec<[u8; 3]>,
 }
 
-const FAVICON: Asset = asset!("/assets/favicon.ico");
-const MAIN_CSS: Asset = asset!("/assets/main.css");
+#[derive(Debug, Deserialize)]
+struct FormulaRequest {
+    formulas: Vec<String>,
+}
 
-// The entry point for the server
-#[cfg(feature = "server")]
+type FormulaQueue = Arc<Mutex<Vec<String>>>;
+
 #[tokio::main]
 async fn main() {
-    use axum::{
-        response::sse::{Event, Sse},
-        routing::get,
-    };
-    use futures::Stream;
-    use server::Platform;
-    use std::time::Duration;
-    use std::{convert::Infallible, time::SystemTime};
-    use tokio::{
-        net::UdpSocket,
-        sync::{broadcast::channel, mpsc},
-        task,
-    };
+    let formula_queue: FormulaQueue = Arc::new(Mutex::new(Vec::new()));
 
-    dioxus_logger::init(Level::INFO).expect("failed to init logger");
+    let app = Router::new()
+        .route("/api/get_leds", get(get_leds))
+        .route("/api/set_formulas", post(set_formulas))
+        .nest_service("/", ServeDir::new("html"))
+        .with_state(formula_queue);
 
-    async fn sse_handler(
-        mut platform: Platform,
-    ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-        let (tx, rx) = mpsc::channel(10);
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    println!("Server running on http://0.0.0.0:8080");
 
-        task::spawn(async move {
-            let mut start = SystemTime::now();
-            loop {
-                use crate::common::FREQUENCY;
-
-                if tx
-                    .send(Ok(Event::default().data(platform.get_circle())))
-                    .await
-                    .is_err()
-                {
-                    tracing::error!("Streaming aborted");
-                    return;
-                }
-                sleep(Duration::from_millis(1000 / FREQUENCY as u64) - start.elapsed().unwrap()).await;
-                tracing::info!("Elapsed: {:?}", start.elapsed());
-                start = SystemTime::now();
-            }
-        });
-
-        // Convert the receiver into a stream
-        Sse::new(tokio_stream::wrappers::ReceiverStream::new(rx))
-    }
-
-    // Create a global instance of Platform, and pass it to the axum router as the context.
-    let platform = server::Platform::new();
-
-    let (tx, rx) = channel::<Vec<u8>>(1);
-    let mut plat = platform.clone();
-    task::spawn(async move {
-        loop {
-            use crate::common::FREQUENCY;
-
-            sleep(Duration::from_millis(1000 / FREQUENCY as u64)).await;
-            match hex::decode(plat.get_circle()) {
-                Ok(leds) => {
-                    if let Err(e) = tx.send(leds) {
-                        tracing::error!("While sending circle data: {e:?}");
-                    }
-                }
-                Err(e) => tracing::error!("Couldn't convert leds to binary: {e:?}"),
-            }
-        }
-    });
-
-    task::spawn(async move {
-        loop {
-            let socket = UdpSocket::bind("0.0.0.0:8081")
-                .await
-                .expect("Binding to port");
-            // Receives a single datagram message on the socket. If `buf` is too small to hold
-            // the message, it will be cut off.
-            let mut buf = [0; 10];
-            if let Ok((_rcv, src)) = socket.recv_from(&mut buf).await {
-                // Redeclare `buf` as slice of the received data and send reverse data back to origin.
-                // tracing::info!("Got {} bytes from {src:?}, waiting for data", rcv);
-                let mut rx = rx.resubscribe();
-                if let Ok(answer) = rx.recv().await {
-                    // tracing::info!("Sending {} bytes through UDP", answer.as_bytes().len());
-                    if answer.len() > 1450 {
-                        tracing::error!("Sending more than 1450 bytes over UDP works rarely!");
-                    }
-                    match socket.send_to(answer.as_slice(), &src).await {
-                        Ok(_s) => {
-                            // tracing::info!("Sent {_s} bytes");
-                        }
-                        Err(e) => tracing::error!("While sending back: {e:?}"),
-                    }
-                }
-            }
-        } // the socket is closed here
-    });
-
-    let router = axum::Router::new()
-        .route(
-            "/get_circle",
-            get({
-                let platform = platform.clone();
-                move || sse_handler(platform.clone())
-            }),
-        )
-        .serve_dioxus_application(
-            ServeConfigBuilder::new().context_providers(std::sync::Arc::new(vec![Box::new(
-                move || Box::new(platform.clone()),
-            )])),
-            App,
-        );
-
-    let router = router.into_make_service();
-    let address = dioxus_cli_config::fullstack_address_or_localhost();
-    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
-    axum::serve(listener, router).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
-// For any other platform, we just launch the app
-#[cfg(not(feature = "server"))]
-fn main() {
-    dioxus_logger::init(Level::INFO).expect("failed to init logger");
-
-    let url = web_sys::window().unwrap().location().origin().unwrap();
-    server_fn::client::set_server_url(url.leak());
-
-    LaunchBuilder::new().launch(App);
+async fn get_leds() -> Json<LedData> {
+    let dummy_leds = vec![[255, 0, 0]; 20];
+    Json(LedData { leds: dummy_leds })
 }
 
-#[component]
-fn App() -> Element {
-    rsx! {
-        document::Link { rel: "icon", href: FAVICON }
-        document::Link { rel: "stylesheet", href: MAIN_CSS }
-        Router::<Route> {}
-    }
-}
-
-#[component]
-fn Home() -> Element {
-    let mut game = use_signal(|| Game::Idle);
-
-    use_future(move || async move {
-        loop {
-            game.set(get_game().await.unwrap());
-            sleep(Duration::from_millis(500)).await;
-        }
-    });
-
-    rsx! {
-        div {
-            match game(){
-                Game::Idle => rsx!{Idle{game}},
-                Game::Snake => rsx!{Snake{}},
-                Game::Drop => rsx!{Drop{}}
-            }
-        }
-    }
-}
-
-#[component]
-fn Idle(game: Signal<Game>) -> Element {
-    rsx! {
-        div {
-            id: "color-grid",
-
-            button {onclick: move |_| async move {
-                if let Err(_) = set_game(Game::Snake).await{
-                };
-            },
-                class:"color-block", style:"background-color: #ffdddd;",
-                "Snake"
-            }
-
-            button {onclick: move |_| async move {
-                if let Err(_) = set_game(Game::Drop).await{
-                };
-            },
-                class:"color-block", style:"background-color: #ddffdd;",
-                "Drop"
-            }
-        }
-    }
-}
-
-#[component]
-fn Reset() -> Element {
-    use_future(|| async {
-        if let Err(e) = set_game(Game::Idle).await {
-            tracing::error!("{e:?}");
-        }
-        navigator().replace(Route::Home {});
-    });
-
-    rsx! {
-        Home{}
-    }
-}
-
-fn document_eval(parts: &[&str]) {
-    document::eval(&parts.join("\n"));
-}
-
-#[component]
-pub fn Display() -> Element {
-    use_effect(move || {
-        document_eval(&[
-            &format!("const LED_COUNT = {LED_COUNT};"),
-            include_str!("../display.js"),
-        ]);
-    });
-
-    rsx! {
-        div {
-            class: "centered-div",
-            div { id: "circle-container" }
-            button {
-                onclick: move |_| async move { navigator().push(Route::Reset{});},
-                class: "centered-div",
-                "Reset"
-            }
-        }
-    }
-}
-
-#[component]
-fn PageNotFound(route: Vec<String>) -> Element {
-    rsx! {
-        h1 { "Page not found" }
-        p { "We are terribly sorry, but the page you requested doesn't exist." }
-        pre { color: "red", "log:\nattemped to navigate to: {route:?}" }
-    }
-}
-
-#[server(endpoint = "get_circle")]
-async fn get_circle() -> Result<String, ServerFnError> {
-    let FromContext(mut plat): FromContext<server::Platform> = extract().await?;
-    Ok(plat.get_circle())
-}
-
-#[server(endpoint = "set_game")]
-pub async fn set_game(game: Game) -> Result<Game, ServerFnError> {
-    let FromContext(mut plat): FromContext<server::Platform> = extract().await?;
-    Ok(plat.set_game(game))
-}
-
-#[server(endpoint = "get_game")]
-pub async fn get_game() -> Result<Game, ServerFnError> {
-    let FromContext(plat): FromContext<server::Platform> = extract().await?;
-    Ok(plat.get_game())
+async fn set_formulas(
+    axum::extract::State(queue): axum::extract::State<FormulaQueue>,
+    Json(payload): Json<FormulaRequest>,
+) -> StatusCode {
+    let mut queue = queue.lock().await;
+    queue.extend(payload.formulas);
+    println!("Added formulas to queue: {:?}", queue);
+    StatusCode::OK
 }

@@ -8,12 +8,7 @@ services:
       - 8080:8080
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.ledhat.rule=Host(`hat.c4dt.org`)"
-      - "traefik.http.routers.ledhat.entrypoints=websecure"
-      - "traefik.http.routers.ledhat.tls.certresolver=myresolver"
-      - "traefik.http.services.ledhat.loadbalancer.server.port=8080"
-      - "com.centurylinklabs.watchtower.enable=true"
-      - "traefik.http.routers.ledhat.service=ledhat"
+      - "fqdn=ledhat.c4dt.org"
     networks:
       - traefik
 
