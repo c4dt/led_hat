@@ -1,4 +1,5 @@
 use axum::{
+    extract::State,
     http::StatusCode,
     response::Json,
     routing::{get, post},
@@ -29,18 +30,30 @@ struct AdminRequest {
 }
 
 type FormulaQueue = Arc<Mutex<Vec<String>>>;
+type SharedHat = Arc<Mutex<hat::Hat>>;
+
+#[derive(Clone)]
+struct AppState {
+    formula_queue: FormulaQueue,
+    hat: SharedHat,
+}
 
 #[tokio::main]
 async fn main() {
     let formula_queue: FormulaQueue = Arc::new(Mutex::new(Vec::new()));
-    let hat = hat::Hat::new(200);
+    let shared_hat: SharedHat = Arc::new(Mutex::new(hat::Hat::new(200)));
+
+    let app_state = AppState {
+        formula_queue,
+        hat: shared_hat,
+    };
 
     let app = Router::new()
         .route("/api/get_leds", get(get_leds))
         .route("/api/set_formulas", post(set_formulas))
         .route("/api/admin", post(admin))
         .nest_service("/", ServeDir::new("html"))
-        .with_state(formula_queue);
+        .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     println!("Server running on http://0.0.0.0:8080");
@@ -48,22 +61,28 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn get_leds() -> Json<LedData> {
+async fn get_leds(State(state): State<AppState>) -> Json<LedData> {
+    let mut hat = state.hat.lock().await;
+    let led_string = hat.get_leds();
+
     let dummy_leds = vec![[255, 0, 0]; 20];
     Json(LedData { leds: dummy_leds })
 }
 
 async fn set_formulas(
-    axum::extract::State(queue): axum::extract::State<FormulaQueue>,
+    State(state): State<AppState>,
     Json(payload): Json<FormulaRequest>,
 ) -> StatusCode {
-    let mut queue = queue.lock().await;
+    let mut queue = state.formula_queue.lock().await;
     queue.extend(payload.formulas);
     println!("Added formulas to queue: {:?}", queue);
+
+    let mut hat = state.hat.lock().await;
+
     StatusCode::OK
 }
 
-async fn admin(Json(payload): Json<AdminRequest>) -> StatusCode {
+async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>) -> StatusCode {
     const ADMIN_SECRET: &str = "admin123";
 
     if payload.secret != ADMIN_SECRET {
@@ -75,6 +94,8 @@ async fn admin(Json(payload): Json<AdminRequest>) -> StatusCode {
         "Admin command: {} with args: {:?}",
         payload.command, payload.args
     );
+
+    let mut hat = state.hat.lock().await;
 
     match payload.command.as_str() {
         "reset" => {

@@ -4,7 +4,7 @@ pub mod countdown;
 pub mod function;
 pub mod icon;
 
-pub trait State {
+pub trait State: Send + Sync {
     fn get_leds(&mut self, time: u128) -> Vec<LED>;
 }
 
