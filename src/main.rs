@@ -41,7 +41,7 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     let formula_queue: FormulaQueue = Arc::new(Mutex::new(Vec::new()));
-    let shared_hat: SharedHat = Arc::new(Mutex::new(hat::Hat::new(200)));
+    let shared_hat: SharedHat = Arc::new(Mutex::new(hat::Hat::new(300, 37)));
 
     let app_state = AppState {
         formula_queue,
@@ -61,12 +61,9 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn get_leds(State(state): State<AppState>) -> Json<LedData> {
+async fn get_leds(State(state): State<AppState>) -> String {
     let mut hat = state.hat.lock().await;
-    let led_string = hat.get_leds();
-
-    let dummy_leds = vec![[255, 0, 0]; 20];
-    Json(LedData { leds: dummy_leds })
+    hat.get_leds()
 }
 
 async fn set_formulas(

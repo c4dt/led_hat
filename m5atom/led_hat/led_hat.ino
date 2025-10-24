@@ -13,11 +13,11 @@
 // Don't check into github...
 #include "wifi.h"
 
-#define BASE_NAME "circle.gasser.blue"
-// #define BASE_NAME "192.168.178.70"
+// #define BASE_NAME "circle.gasser.blue"
+#define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
-#define BASE_URL "https://" BASE_NAME
-// #define BASE_URL "http://" BASE_NAME ":8080"
+// #define BASE_URL "https://" BASE_NAME
+#define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
 #define REQUEST_FPS 20
@@ -25,9 +25,7 @@
 
 #define PIN_STRIP 26
 #define PIN_LED 27
-#define NUMPIXELS 292
-#define CIRCLE_SIZE 288
-#define FIRST_PIXEL 4
+#define NUMPIXELS 300
 
 #define UDP_WAIT_MS 20
 
@@ -38,8 +36,9 @@
 
 #include <Adafruit_NeoPixel.h>
 
-// The first pixel is covered by tape...
-Adafruit_NeoPixel pixels(NUMPIXELS + 1, PIN_STRIP, NEO_GRB + NEO_KHZ800);
+// With the Brack LED-line, it's NEO_RGBW
+// With the Circle, it's NEO_GRB
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN_STRIP, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel led(1, PIN_LED, NEO_GRB + NEO_KHZ800);
 
 static uint8_t hex2u8(const char *c) {
@@ -63,16 +62,16 @@ void state_udp_read();
 void state_sse_connect();
 #define STATE_SSE_STREAM 3
 void state_sse_stream();
-#define STATE_POST_CONNECT 4
-void state_post_connect();
-#define STATE_POST_REQUEST 5
-void state_post_request();
+#define STATE_GET_CONNECT 4
+void state_get_connect();
+#define STATE_GET_REQUEST 5
+void state_get_request();
 
 #define REQUEST_UDP 0
 #define REQUEST_SSE 1
-#define REQUEST_POST 2
+#define REQUEST_GET 2
 
-int request = REQUEST_UDP;
+int request = REQUEST_GET;
 WiFiMulti wifiMulti;
 int state = 0;
 
@@ -81,7 +80,8 @@ HTTPClient http;
 bool http_begin(String url){
   http.setReuse(false);
   http.end();
-  return http.begin(url, (const char*)NULL);
+  // return http.begin(url, (const char*)NULL);
+  return http.begin(url);
 }
 
 int request_start() {
@@ -91,8 +91,8 @@ int request_start() {
   }
 
   switch (request) {
-    case REQUEST_POST:
-      return STATE_POST_CONNECT;
+    case REQUEST_GET:
+      return STATE_GET_CONNECT;
     case REQUEST_SSE:
       return STATE_SSE_CONNECT;
     case REQUEST_UDP:
@@ -135,11 +135,11 @@ void loop() {
     case STATE_SSE_STREAM:
       state_sse_stream();
       break;
-    case STATE_POST_CONNECT:
-      state_post_connect();
+    case STATE_GET_CONNECT:
+      state_get_connect();
       break;
-    case STATE_POST_REQUEST:
-      state_post_request();
+    case STATE_GET_REQUEST:
+      state_get_request();
       break;
   }
 
@@ -151,19 +151,17 @@ void loop() {
 }
 
 void show_LEDs_hex(const char *hexes) {
-  for (int i = 0; i < CIRCLE_SIZE; i++) {
-    pixels.setPixelColor(((i + CIRCLE_SIZE / 2) % CIRCLE_SIZE) + FIRST_PIXEL,
-                         str2pix(hexes + i * 6));
-    // pixels.gamma32(str2pix(hexes + i * 6)));
+  for (int i = 0; i < NUMPIXELS; i++) {
+    // pixels.setPixelColor(i, str2pix(hexes + i * 6));
+    pixels.setPixelColor(i, pixels.gamma32(str2pix(hexes + i * 6)));
   }
   pixels.show();
 }
 
 void show_LEDs(uint8_t *rgb) {
-  for (int i = 0; i < CIRCLE_SIZE; i++) {
-    // int j = (i + CIRCLE_SIZE / 2) % CIRCLE_SIZE;
-    int j = CIRCLE_SIZE - i;
-    pixels.setPixelColor(j + FIRST_PIXEL,
+  for (int i = 0; i < NUMPIXELS; i++) {
+    int j = NUMPIXELS - i;
+    pixels.setPixelColor(j,
                          pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2]));
   }
   pixels.show();
@@ -203,7 +201,7 @@ void state_udp_read() {
     }
     delay(10);
   }
-  int bufLen = CIRCLE_SIZE * 3;
+  int bufLen = NUMPIXELS * 3;
   uint8_t buf[bufLen + 1];
   int res = client_udp.read(buf, bufLen);
   if (res != bufLen) {
@@ -243,10 +241,10 @@ void state_sse_connect() {
 
   // Serial.println("Now for the api one");
   // http_begin("https://circle.gasser.blue/api/get_circle");
-  // http.POST("");
+  // http.GET();
 
   // Serial.println("and for a post_request");
-  // state_post_request();
+  // state_get_request();
 
   // Serial.println("Waiting");
   // delay(10000);
@@ -264,7 +262,7 @@ void state_sse_stream() {
     Serial.printf("Out of sync by %d - interval: %d\n", next_read - start, read_interval);
   }
 
-  int bufLen = CIRCLE_SIZE * 6 + 15;
+  int bufLen = NUMPIXELS * 6 + 15;
   if (client->available() < bufLen) {
     int loop = 10;
     for (; client->available() < bufLen; loop--) {
@@ -312,45 +310,46 @@ void state_sse_stream() {
   }
 }
 
-void state_post_connect(){
-  http_begin(BASE_URL "/api/get_circle");
-  // http.POST("");
+void state_get_connect(){
+  char *url = BASE_URL "/api/get_leds";
+  // char *url = "http://1.1.1.1";
+  http_begin(url);
+  Serial.printf("Connecting to: %s\n", url);
+  // http.GET();
 
-  state = STATE_POST_REQUEST;
+  state = STATE_GET_REQUEST;
 }
 
-void state_post_request() {
-  http.setReuse(true);
+void state_get_request() {
+  // http.setReuse(true);
 
   unsigned long start = millis();
-  int httpCode = http.POST("");
-  // Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+  int httpCode = http.GET();
+  // Serial.printf("[HTTP] GET... code: %d\n", httpCode);
 
   if (httpCode > 0) {
 
     if (httpCode == HTTP_CODE_OK) {
       String payload = http.getString();
-
-      // const char *hexes = payload.c_str() + 1;
-      // Serial.println(payload);
       // Serial.println(hexes);
-      show_LEDs_hex(payload.c_str() + 1);
+      show_LEDs_hex(payload.c_str());
     } else {
       Serial.printf("Wrong http code: %d\n", httpCode);
-      state = STATE_POST_CONNECT;
+      state = STATE_GET_CONNECT;
       return;
     }
   } else {
-    Serial.printf("[HTTP] POST... failed, error: %s\n",
-                  http.errorToString(httpCode).c_str());
-    state = STATE_POST_CONNECT;
+    Serial.printf("[HTTP] GET... failed, error(%d): %s\n",
+                  httpCode, http.errorToString(httpCode).c_str());
+    state = STATE_GET_CONNECT;
+    delay(5000);
     return;
   }
 
   // http.end();
 
   unsigned long stop = millis();
-  Serial.printf("POST request duration: %ld..%ld = %ld\n", start, stop, stop - start);
+  Serial.printf("GET request duration: %ld..%ld = %ld\n", start, stop, stop - start);
   stop = millis();
   if (stop < start + REQUEST_INTERVAL) {
     delay(REQUEST_INTERVAL - (stop - start));
@@ -362,7 +361,7 @@ void fetch_button() {
     http_begin(BASE_URL "/api/game_reset");
     led.setPixelColor(0, pixels.Color(32, 32, 0));
     led.show();
-    int httpCode = http.POST(String(""));
+    int httpCode = http.GET();
     led.setPixelColor(0, pixels.Color(0, 32, 0));
     led.show();
     // Serial.printf("Sent reset with code: %d\n", httpCode);
