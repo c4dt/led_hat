@@ -108,19 +108,12 @@ impl LEDCriss {
                     // println!("Index out of range: index({index})");
                     continue;
                 }
-                // Calculate the brightness proportional to the area the circle
-                // of this point overlaps with the target circle.
-                let d = ((x as f32 - fx).powi(2) + (y as f32 - fy).powi(2)).sqrt();
-                // α = 2 * acos(d / (2R))
-                // a = 0.5 * R² * (α - sin(α))
 
-                let r = 2f32.sqrt() / 1.9;
-                let alpha = 2. * (d / (2. * r)).acos();
-                let a = 0.5 * r.powi(2) * (alpha - alpha.sin());
-                let bright = 2. * a / (r.powi(2) * PI);
+                let (dx, dy) = (x as f32 - fx, y as f32 - fy);
+                let bright = Self::calc_square(dx, dy);
 
                 // Add to existing LEDs, so it should be nice.
-                // println!("index({index}) - d({d}) - bright({bright})");
+                // println!("index({index}) - dx({dx})/dy({dy}) - bright({bright})");
                 if bright >= 0. {
                     self.leds[index as usize / 2].add(&led.brightness(bright));
                 } else {
@@ -128,6 +121,30 @@ impl LEDCriss {
                 }
             }
         }
+    }
+
+    fn calc_square(mut dx: f32, mut dy: f32) -> f32 {
+        (dx, dy) = (dx.abs(), dy.abs());
+        if dx >= 2. || dy >= 2. {
+            return 0.;
+        }
+        if dy > dx {
+            (dx, dy) = (dy, dx);
+        }
+        (((2. - dx).powi(2) - dy.powi(2)) / 4.).powf(0.8)
+    }
+
+    fn calc_circle(dx: f32, dy: f32) -> f32 {
+        // Calculate the brightness proportional to the area the circle
+        // of this point overlaps with the target circle.
+        let d = (dx.powi(2) + dy.powi(2)).sqrt();
+        // α = 2 * acos(d / (2R))
+        // a = 0.5 * R² * (α - sin(α))
+
+        let r = 2f32.sqrt() / 1.9;
+        let alpha = 2. * (d / (2. * r)).acos();
+        let a = 0.5 * r.powi(2) * (alpha - alpha.sin());
+        2. * a / (r.powi(2) * PI)
     }
 }
 

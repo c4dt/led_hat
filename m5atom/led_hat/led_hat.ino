@@ -152,7 +152,7 @@ void loop() {
 
 void show_LEDs_hex(const char *hexes) {
   for (int i = 0; i < NUMPIXELS; i++) {
-    // pixels.setPixelColor(i, str2pix(hexes + i * 6));
+    pixels.setPixelColor(i, str2pix(hexes + i * 6));
     pixels.setPixelColor(i, pixels.gamma32(str2pix(hexes + i * 6)));
   }
   pixels.show();

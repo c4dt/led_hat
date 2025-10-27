@@ -6,6 +6,7 @@ pub enum IconType {
     Empty,
     Test,
     Pumpkin,
+    Fish,
 }
 
 pub struct Icon {
@@ -18,8 +19,13 @@ impl State for Icon {
         match self.icon {
             IconType::Empty => {}
             IconType::Test => {
+                self.leds.clear();
                 for i in 0..=(self.leds.range.1) {
-                    self.leds.set(0., i as f32, &LED::from_hex("200808"));
+                    self.leds.set(
+                        40. + ((time as f64 / 2000.).sin() * 3.) as f32,
+                        i as f32,
+                        &LED::from_hex("800000"),
+                    );
                 }
             }
             IconType::Pumpkin => {
@@ -28,15 +34,33 @@ impl State for Icon {
                     0.,
                     r#"
                     000011111111111111000
-                    111111111111111111110
-                    111100111111111100111
-                    111111111111111111111
+                    111110011111111001110
+                    111100011111111000111
+                    111111111100111111111
                     111111110000001111111
                     111110011111111001110
                     001111000000000011110
                     000001111111111110000
                     "#,
-                    vec![LED::black(), LED::from_hex("804000")],
+                    vec![LED::black(), LED::from_hex("402000")],
+                );
+            }
+            IconType::Fish => {
+                self.draw_icon(
+                    40. + ((time as f64 / 2000.).sin() * 3.) as f32,
+                    0.,
+                    r#"
+                    00000000000000000000000
+                    00000000000000000000000
+                    10000000000111111000000
+                    11100000011000000110000
+                    10011001100000000001100
+                    10000110000000000000011
+                    10011001100000000001100
+                    11100000011000000110000
+                    00000000000111111000000
+                    "#,
+                    vec![LED::black(), LED::from_hex("204040")],
                 );
             }
         }
@@ -48,7 +72,7 @@ impl Icon {
     pub fn new(leds: usize, circum: usize) -> Self {
         Self {
             leds: LEDCriss::new(leds, circum),
-            icon: IconType::Pumpkin,
+            icon: IconType::Fish,
         }
     }
 
