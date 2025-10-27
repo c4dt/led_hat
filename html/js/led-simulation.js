@@ -1,7 +1,7 @@
 // LED simulation for the user interface
 class LEDSimulation {
-  constructor(ledCount = 30, ringCount = 10) {
-    this.ledCount = ledCount;
+  constructor(circCount = 30, ringCount = 10) {
+    this.circCount = circCount;
     this.ringCount = ringCount;
     this.leds = [];
     this.animationId = null;
@@ -30,15 +30,15 @@ class LEDSimulation {
 
     for (let j = 0; j < this.ringCount; j++) {
       const radius = containerSize / 2 - 20 - j * 10; // Leave some margin for LED size
-      for (let i = 0; i < this.ledCount; i++) {
+      for (let i = 0; i < this.circCount; i++) {
         const led = document.createElement("div");
         led.className = "led";
-        const index = j * this.ledCount + i;
+        const index = j * this.circCount + i;
         led.dataset.index = index;
 
         // Calculate position around the circle
         const angle =
-          ((i + (j % 2) / 2) / this.ledCount) * 2 * Math.PI - Math.PI / 2; // Start from top
+          ((i + (j % 2) / 2) / this.circCount) * 2 * Math.PI - Math.PI / 2; // Start from top
         const x = centerX + radius * Math.cos(angle);
         const y = centerY + radius * Math.sin(angle);
 
@@ -50,7 +50,7 @@ class LEDSimulation {
           element: led,
           index: index,
           angle: angle,
-          x: (i / (this.ledCount - 1)) * 2 - 1,
+          x: (i / (this.circCount - 1)) * 2 - 1,
           y: j / (this.ringCount - 1),
         });
       }
@@ -65,7 +65,7 @@ class LEDSimulation {
     this.leds.forEach((led) => {
       const variables = {
         x: led.x,
-        y: (led.y + 1) / 2, // Convert from -1,1 to 0,1 range for y
+        y: led.y,
         t: this.currentTime,
       };
 
@@ -146,27 +146,6 @@ class LEDSimulation {
     this.updateLEDs(redFormula, greenFormula, blueFormula, time);
   }
 
-  // Generate preview data for the server
-  generatePreviewData(redFormula, greenFormula, blueFormula) {
-    const ledData = [];
-
-    this.leds.forEach((led) => {
-      const variables = {
-        x: led.x,
-        y: (led.y + 1) / 2,
-        t: this.currentTime,
-      };
-
-      const red = this.formulaParser.evaluateForLED(redFormula, variables);
-      const green = this.formulaParser.evaluateForLED(greenFormula, variables);
-      const blue = this.formulaParser.evaluateForLED(blueFormula, variables);
-
-      ledData.push([red, green, blue]);
-    });
-
-    return ledData;
-  }
-
   // Convert LED data to hex string (like the server expects)
   ledDataToHex(ledData) {
     let hexString = "";
@@ -216,13 +195,13 @@ class LEDSimulation {
 
   // Get LED count
   getLEDCount() {
-    return this.ledCount;
+    return this.circCount;
   }
 
   // Set LED count (reinitialize if different)
   setLEDCount(count) {
-    if (count !== this.ledCount) {
-      this.ledCount = count;
+    if (count !== this.circCount) {
+      this.circCount = count;
       this.initializeLEDs();
     }
   }

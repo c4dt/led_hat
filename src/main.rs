@@ -41,6 +41,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/get_leds", get(get_leds))
+        .route("/api/get_status", get(get_status))
         .route("/api/set_formulas", post(set_formulas))
         .route("/api/admin", post(admin))
         .nest_service("/", ServeDir::new("html"))
@@ -57,10 +58,16 @@ async fn get_leds(State(state): State<AppState>) -> String {
     hat.get_leds()
 }
 
+async fn get_status(State(state): State<AppState>) -> String {
+    let hat = state.hat.lock().await;
+    hat.get_status()
+}
+
 async fn set_formulas(
     State(state): State<AppState>,
     Json(payload): Json<FormulaStrings>,
 ) -> StatusCode {
+    println!("Got new formulas: {payload:?}");
     let mut hat = state.hat.lock().await;
     hat.add_formula(payload);
 

@@ -25,6 +25,9 @@ class UserInterface {
 
     // Set up event listeners
     this.setupEventListeners();
+
+    // Check backend connectivity
+    this.checkBackendConnectivity();
   }
 
   setupEventListeners() {
@@ -223,7 +226,10 @@ class UserInterface {
     }
 
     this.loadExample(selectedPattern);
-    this.showStatusMessage(`${selectedPattern.charAt(0).toUpperCase() + selectedPattern.slice(1)} pattern loaded!`, "success");
+    this.showStatusMessage(
+      `${selectedPattern.charAt(0).toUpperCase() + selectedPattern.slice(1)} pattern loaded!`,
+      "success",
+    );
   }
 
   updateExampleButton() {
@@ -337,6 +343,107 @@ class UserInterface {
     this.showStatusMessage("Formula loaded from history", "success");
   }
 
+  async checkBackendConnectivity() {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/get_status`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const status = await response.text();
+        this.updateHatStatus(status.trim());
+      } else {
+        this.updateHatStatus("offline");
+      }
+    } catch (error) {
+      console.warn("Backend connectivity check failed:", error);
+      this.updateHatStatus("offline");
+    }
+  }
+
+  updateHatStatus(status) {
+    const sendBtn = document.getElementById("send-hat-btn");
+    const accessText = document.getElementById("access-text");
+
+    const isReady = status === "Function";
+
+    // Update button state
+    if (sendBtn) {
+      sendBtn.disabled = !isReady;
+      sendBtn.textContent = isReady ? "Send to Hat" : "Hat Busy";
+    }
+
+    // Update access text display
+    if (accessText) {
+      if (status === "offline") {
+        accessText.textContent = "Hat is offline";
+      } else if (isReady) {
+        accessText.textContent = "Hat is ready";
+      } else {
+        accessText.textContent = "Hat is busy";
+      }
+    }
+  }
+
+  async sendToHat() {
+    // Check if button is disabled (hat not ready)
+    const sendBtn = document.getElementById("send-hat-btn");
+    if (sendBtn && sendBtn.disabled) {
+      this.showStatusMessage("Hat is not ready to receive formulas", "error");
+      return;
+    }
+
+    const redFormula = document.getElementById("red-formula")?.value || "";
+    const greenFormula = document.getElementById("green-formula")?.value || "";
+    const blueFormula = document.getElementById("blue-formula")?.value || "";
+
+    // Validate formulas
+    const redValidation = this.formulaParser.validate(redFormula);
+    const greenValidation = this.formulaParser.validate(greenFormula);
+    const blueValidation = this.formulaParser.validate(blueFormula);
+
+    if (
+      !redValidation.valid ||
+      !greenValidation.valid ||
+      !blueValidation.valid
+    ) {
+      this.showStatusMessage(
+        "Please fix formula errors before sending to hat",
+        "error",
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/set_formulas`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          red: redFormula,
+          green: greenFormula,
+          blue: blueFormula,
+        }),
+      });
+
+      if (response.ok) {
+        this.showStatusMessage("Formulas sent to hat successfully!", "success");
+      } else {
+        const errorText = await response.text();
+        this.showStatusMessage(`Failed to send to hat: ${errorText}`, "error");
+      }
+    } catch (error) {
+      console.error("Error sending to hat:", error);
+      this.showStatusMessage("Network error - could not send to hat", "error");
+      // Check connectivity again
+      this.checkBackendConnectivity();
+    }
+  }
+
   // Removed periodic status checks - not needed in standalone mode
 
   destroy() {
@@ -398,6 +505,12 @@ function loadExample() {
 function loadSelectedExample() {
   if (userInterface) {
     userInterface.loadSelectedExample();
+  }
+}
+
+function sendToHat() {
+  if (userInterface) {
+    userInterface.sendToHat();
   }
 }
 

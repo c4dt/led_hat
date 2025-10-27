@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::hat::leds::LED;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, f32::consts::PI};
 
 #[derive(Default)]
 pub struct Function {
+    leds: usize,
     // width of the LED wall
     width: usize,
     // height of the LED wall
@@ -29,11 +30,13 @@ pub struct FormulaStrings {
 }
 
 impl Function {
-    pub fn new(width: usize, height: usize, time_min: u128, time_total: u128) -> Function {
+    pub fn new(leds: usize, circum: usize, time_min: u128, time_total: u128) -> Function {
+        println!("{leds} / {circum} / {}", leds / circum);
         Function {
-            width,
-            height,
-            queue: VecDeque::new(),
+            leds,
+            width: circum * 2 - 1,
+            height: leds / circum,
+            queue: VecDeque::from([Formula::new("t sin".into(), "x".into(), "y".into())]),
             current: None,
             time_min,
             time_total,
@@ -82,9 +85,9 @@ impl Function {
         // Calculate LEDs
         let mut leds = vec![];
         if let Some(formula) = &self.current {
-            for x in 0..self.width {
-                for y in 0..self.height {
-                    if x + y % 2 == 1 {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    if ((x + y) % 2) == 1 {
                         // These are the missing LEDs.
                         continue;
                     }
@@ -96,6 +99,9 @@ impl Function {
             }
         }
 
+        while leds.len() < self.leds {
+            leds.push(LED::black());
+        }
         leds
     }
 }
@@ -199,32 +205,32 @@ impl Formula {
                 // Unary functions
                 "cos" => {
                     if let Some(a) = stack.pop() {
-                        stack.push((a * std::f32::consts::PI).cos());
+                        stack.push((a * PI).cos());
                     }
                 }
                 "sin" => {
                     if let Some(a) = stack.pop() {
-                        stack.push((a * std::f32::consts::PI).sin());
+                        stack.push((a * PI).sin());
                     }
                 }
                 "tan" => {
                     if let Some(a) = stack.pop() {
-                        stack.push((a * std::f32::consts::PI).tan());
+                        stack.push((a * PI).tan());
                     }
                 }
                 "acos" => {
                     if let Some(a) = stack.pop() {
-                        stack.push(a.acos() / std::f32::consts::PI);
+                        stack.push(a.acos() / PI);
                     }
                 }
                 "asin" => {
                     if let Some(a) = stack.pop() {
-                        stack.push(a.asin() / std::f32::consts::PI);
+                        stack.push(a.asin() / PI);
                     }
                 }
                 "atan" => {
                     if let Some(a) = stack.pop() {
-                        stack.push(a.atan() / std::f32::consts::PI);
+                        stack.push(a.atan() / PI);
                     }
                 }
                 "sqrt" => {
@@ -248,7 +254,7 @@ impl Formula {
         }
 
         // Return the top of the stack or 0 if empty
-        (stack.pop().unwrap_or(0.0) / 2. * 256. + 0.5).clamp(0., 255.) as u8
+        (stack.pop().unwrap_or(0.0) / 2. * 256. + 128.).clamp(0., 255.) as u8 / 4
     }
 
     fn is_number(token: &str) -> bool {
@@ -260,5 +266,32 @@ impl Formula {
             return 0;
         }
         value.clamp(0.0, 255.0) as u8
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_range() {
+        let form = Formula::new("x cos".into(), "y cos".into(), "t cos".into());
+        let led = form.eval(0., 0., 0.);
+        println!("{led:?}");
+        let led = form.eval(-1., 0., 0.);
+        println!("{led:?}");
+        let led = form.eval(1., 1., 1.);
+        println!("{led:?}");
+    }
+
+    #[test]
+    fn test_function() {
+        let mut func = Function::new(10, 5, 10000, 10000);
+        func.add_formula(FormulaStrings {
+            red: "x cos".into(),
+            green: "y cos".into(),
+            blue: "t cos".into(),
+        });
+        println!("{:?}", func.get_leds(0));
     }
 }

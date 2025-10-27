@@ -21,9 +21,9 @@ impl Switch {
     pub fn new(leds: usize, circum: usize) -> Self {
         Switch {
             icons: Icon::new(leds, circum),
-            function: Function::new(leds, circum, 10000, 60000),
+            function: Function::new(leds, circum, 1, 1),
             countdown: Countdown::new(),
-            state: HatState::Icon,
+            state: HatState::Function,
         }
     }
 
@@ -39,6 +39,15 @@ impl Switch {
         .map(|led| led.to_string())
         .collect::<Vec<_>>()
         .join("")
+    }
+
+    pub fn get_status(&self) -> String {
+        match self.state {
+            HatState::Function => "Function",
+            HatState::Icon => "Icon",
+            HatState::Countdown => "Countdown",
+        }
+        .into()
     }
 
     pub fn add_formula(&mut self, fs: FormulaStrings) {
