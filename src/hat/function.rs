@@ -1,6 +1,7 @@
-use crate::hat::leds::LED;
+use serde::{Deserialize, Serialize};
 
-use super::State;
+use crate::hat::leds::LED;
+use std::collections::VecDeque;
 
 #[derive(Default)]
 pub struct Function {
@@ -9,7 +10,7 @@ pub struct Function {
     // height of the LED wall
     height: usize,
     // Formulas waiting in the queue
-    queue: Vec<Formula>,
+    queue: VecDeque<Formula>,
     // The current formula, or None
     current: Option<Formula>,
     // Minimum time a formula is shown, in seconds
@@ -20,8 +21,37 @@ pub struct Function {
     time_start: u128,
 }
 
-impl State for Function {
-    fn get_leds(&mut self, time_ms: u128) -> Vec<super::LED> {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FormulaStrings {
+    red: String,
+    green: String,
+    blue: String,
+}
+
+impl Function {
+    pub fn new(width: usize, height: usize, time_min: u128, time_total: u128) -> Function {
+        Function {
+            width,
+            height,
+            queue: VecDeque::new(),
+            current: None,
+            time_min,
+            time_total,
+            time_start: 0,
+        }
+    }
+
+    pub fn add_formula(&mut self, fs: FormulaStrings) {
+        self.queue
+            .push_back(Formula::new(fs.red, fs.green, fs.blue));
+    }
+
+    pub fn clear_queue(&mut self) {
+        self.queue.clear();
+        self.current = None;
+    }
+
+    pub fn get_leds(&mut self, time_ms: u128) -> Vec<super::LED> {
         // Calculate the current state of the LEDs.
         // This needs to do the following:
         // 1. decide if it's time to go to the next formula, based on the
@@ -33,10 +63,21 @@ impl State for Function {
         //   - the x goes from -1 to 1, as does the y
         // 3. return the LEDs
 
-        // Check if the next formula needs to be added, depending on
-        // time_ms and all the self.time_ variables.
+        // Check if we need to advance to the next formula
+        let time_since_start = time_ms - self.time_start;
+        let should_advance = if self.current.is_some() {
+            time_since_start >= self.time_min * 1000 && !self.queue.is_empty()
+        } else {
+            !self.queue.is_empty()
+        };
 
-        todo!();
+        if should_advance {
+            // Move to next formula from queue
+            if let Some(form) = self.queue.pop_front() {
+                self.current = Some(form);
+                self.time_start = time_ms;
+            }
+        }
 
         // Calculate LEDs
         let mut leds = vec![];
@@ -59,29 +100,165 @@ impl State for Function {
     }
 }
 
-impl Function {
-    pub fn new() -> Function {
-        Self::default()
-    }
-}
-
 // Stores one formula
 struct Formula {
     // The raw formula as received from the frontend.
-    raw: String,
-    // Whatever interpretation is needed can be added here.
+    // It comes as one string per color.
+    red: String,
+    green: String,
+    blue: String,
 }
 
 impl Formula {
-    fn new(raw: String) -> Self {
-        // Do any interpretation necessary to the raw string here.
-        Self { raw }
+    fn new(red: String, green: String, blue: String) -> Self {
+        // For now, we store the raw formula and validate during evaluation
+        // Future enhancement could pre-parse and validate here
+        Self { red, green, blue }
     }
 
     // Returns the value of the LED at this position and time.
     // x, y go from 0 to 1, as in the frontend
     // t goes from 0 to infinity.
     fn eval(&self, x: f32, y: f32, t: f32) -> LED {
-        todo!()
+        // Evaluate the formula using reverse Polish notation
+        let red = Self::evaluate_rpn(&self.red, x, y, t);
+        let green = Self::evaluate_rpn(&self.green, x, y, t);
+        let blue = Self::evaluate_rpn(&self.blue, x, y, t);
+
+        // Convert result to LED color
+        LED::from_rgb(red, green, blue)
+    }
+
+    fn evaluate_rpn(raw: &str, x: f32, y: f32, t: f32) -> u8 {
+        let tokens: Vec<&str> = raw.trim().split_whitespace().collect();
+        let mut stack: Vec<f32> = Vec::new();
+
+        for token in tokens {
+            match token {
+                // Numbers
+                token if Self::is_number(token) => {
+                    if let Ok(num) = token.parse::<f32>() {
+                        stack.push(num);
+                    }
+                }
+                // Variables
+                "x" => stack.push(x),
+                "y" => stack.push(y),
+                "t" => stack.push(t),
+                // Binary operators
+                "+" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        stack.push(a + b);
+                    }
+                }
+                "-" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        stack.push(a - b);
+                    }
+                }
+                "*" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        stack.push(a * b);
+                    }
+                }
+                "/" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        if b != 0.0 {
+                            stack.push(a / b);
+                        } else {
+                            stack.push(0.0);
+                        }
+                    }
+                }
+                "%" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        if b != 0.0 {
+                            stack.push(a % b);
+                        } else {
+                            stack.push(0.0);
+                        }
+                    }
+                }
+                "^" | "pow" => {
+                    if stack.len() >= 2 {
+                        let b = stack.pop().unwrap();
+                        let a = stack.pop().unwrap();
+                        stack.push(a.powf(b));
+                    }
+                }
+                // Unary functions
+                "cos" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push((a * std::f32::consts::PI).cos());
+                    }
+                }
+                "sin" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push((a * std::f32::consts::PI).sin());
+                    }
+                }
+                "tan" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push((a * std::f32::consts::PI).tan());
+                    }
+                }
+                "acos" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.acos() / std::f32::consts::PI);
+                    }
+                }
+                "asin" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.asin() / std::f32::consts::PI);
+                    }
+                }
+                "atan" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.atan() / std::f32::consts::PI);
+                    }
+                }
+                "sqrt" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.sqrt());
+                    }
+                }
+                "exp" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.exp());
+                    }
+                }
+                "abs" => {
+                    if let Some(a) = stack.pop() {
+                        stack.push(a.abs());
+                    }
+                }
+                // Unknown tokens are ignored
+                _ => {}
+            }
+        }
+
+        // Return the top of the stack or 0 if empty
+        (stack.pop().unwrap_or(0.0) / 2. * 256. + 0.5).clamp(0., 255.) as u8
+    }
+
+    fn is_number(token: &str) -> bool {
+        token.parse::<f32>().is_ok()
+    }
+
+    fn clamp_to_u8_range(&self, value: f32) -> u8 {
+        if value.is_nan() || !value.is_finite() {
+            return 0;
+        }
+        value.clamp(0.0, 255.0) as u8
     }
 }

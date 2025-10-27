@@ -10,43 +10,34 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tower_http::services::ServeDir;
 
+use crate::hat::{function::FormulaStrings, switch::HatState};
+
 mod hat;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct LedData {
-    leds: Vec<[u8; 3]>,
+#[derive(Debug, Deserialize, Serialize)]
+pub enum AdminCommand {
+    Countdown(u128),
+    Icon(String),
 }
 
-#[derive(Debug, Deserialize)]
-struct FormulaRequest {
-    formulas: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AdminRequest {
     secret: String,
-    command: String,
-    args: Vec<String>,
+    command: AdminCommand,
 }
 
-type FormulaQueue = Arc<Mutex<Vec<String>>>;
 type SharedHat = Arc<Mutex<hat::switch::Switch>>;
 
 #[derive(Clone)]
 struct AppState {
-    formula_queue: FormulaQueue,
     hat: SharedHat,
 }
 
 #[tokio::main]
 async fn main() {
-    let formula_queue: FormulaQueue = Arc::new(Mutex::new(Vec::new()));
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
 
-    let app_state = AppState {
-        formula_queue,
-        hat: shared_hat,
-    };
+    let app_state = AppState { hat: shared_hat };
 
     let app = Router::new()
         .route("/api/get_leds", get(get_leds))
@@ -68,13 +59,10 @@ async fn get_leds(State(state): State<AppState>) -> String {
 
 async fn set_formulas(
     State(state): State<AppState>,
-    Json(payload): Json<FormulaRequest>,
+    Json(payload): Json<FormulaStrings>,
 ) -> StatusCode {
-    let mut queue = state.formula_queue.lock().await;
-    queue.extend(payload.formulas);
-    println!("Added formulas to queue: {:?}", queue);
-
     let mut hat = state.hat.lock().await;
+    hat.add_formula(payload);
 
     StatusCode::OK
 }
@@ -87,27 +75,13 @@ async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>)
         return StatusCode::UNAUTHORIZED;
     }
 
-    println!(
-        "Admin command: {} with args: {:?}",
-        payload.command, payload.args
-    );
+    println!("Admin command: {:?}", payload.command);
 
     let mut hat = state.hat.lock().await;
 
-    match payload.command.as_str() {
-        "reset" => {
-            println!("Executing reset command");
-        }
-        "status" => {
-            println!("Executing status command");
-        }
-        "shutdown" => {
-            println!("Executing shutdown command");
-        }
-        _ => {
-            println!("Unknown admin command: {}", payload.command);
-            return StatusCode::BAD_REQUEST;
-        }
+    match payload.command {
+        AdminCommand::Countdown(_) => hat.set_state(HatState::Countdown),
+        AdminCommand::Icon(_) => hat.set_state(HatState::Icon),
     }
 
     StatusCode::OK

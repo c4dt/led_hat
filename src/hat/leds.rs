@@ -133,6 +133,10 @@ impl LED {
         }
     }
 
+    pub fn from_rgb(red: u8, green: u8, blue: u8) -> LED {
+        Self { red, green, blue }
+    }
+
     pub fn from_hue(hue: u8) -> LED {
         let bright = hue % 64;
         let hue = hue / 64;

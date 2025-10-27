@@ -1,7 +1,5 @@
 use crate::hat::leds::{LEDCriss, LED};
 
-use super::State;
-
 pub enum IconType {
     Empty,
     Test,
@@ -14,8 +12,15 @@ pub struct Icon {
     icon: IconType,
 }
 
-impl State for Icon {
-    fn get_leds(&mut self, time: u128) -> Vec<super::LED> {
+impl Icon {
+    pub fn new(leds: usize, circum: usize) -> Self {
+        Self {
+            leds: LEDCriss::new(leds, circum),
+            icon: IconType::Fish,
+        }
+    }
+
+    pub fn get_leds(&mut self, time: u128) -> Vec<super::LED> {
         match self.icon {
             IconType::Empty => {}
             IconType::Test => {
@@ -65,15 +70,6 @@ impl State for Icon {
             }
         }
         self.leds.leds.clone()
-    }
-}
-
-impl Icon {
-    pub fn new(leds: usize, circum: usize) -> Self {
-        Self {
-            leds: LEDCriss::new(leds, circum),
-            icon: IconType::Fish,
-        }
     }
 
     fn draw_icon(&mut self, pos_x: f32, mut pos_y: f32, pattern: &str, colors: Vec<LED>) {
