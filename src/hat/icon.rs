@@ -1,4 +1,4 @@
-use crate::hat::{Hat, LEDCriss, LED};
+use crate::hat::leds::{LEDCriss, LED};
 
 use super::State;
 

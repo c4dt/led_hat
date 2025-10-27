@@ -30,7 +30,7 @@ struct AdminRequest {
 }
 
 type FormulaQueue = Arc<Mutex<Vec<String>>>;
-type SharedHat = Arc<Mutex<hat::Hat>>;
+type SharedHat = Arc<Mutex<hat::switch::Switch>>;
 
 #[derive(Clone)]
 struct AppState {
@@ -41,7 +41,7 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     let formula_queue: FormulaQueue = Arc::new(Mutex::new(Vec::new()));
-    let shared_hat: SharedHat = Arc::new(Mutex::new(hat::Hat::new(300, 37)));
+    let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
 
     let app_state = AppState {
         formula_queue,
