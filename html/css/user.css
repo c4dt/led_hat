@@ -86,15 +86,25 @@ header h1 {
     grid-template-columns: 1fr;
 }
 
+.led-circle {
+    width: 400px;
+    max-width: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    margin: 0 auto 30px;
+    position: relative;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.1) 0%,
+        transparent 70%
+    );
+    aspect-ratio: 1;
+}
+
 @media (min-width: 768px) {
     .main-content-wrapper {
         grid-template-columns: 1fr;
         gap: 35px;
-    }
-
-    .led-circle {
-        max-width: 450px;
-        height: 450px;
     }
 }
 
@@ -379,26 +389,9 @@ button {
     text-align: center;
 }
 
-.led-circle {
-    width: 100%;
-    max-width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    margin: 0 auto 30px;
-    position: relative;
-    background: radial-gradient(
-        circle,
-        rgba(255, 255, 255, 0.1) 0%,
-        transparent 70%
-    );
-}
-
 @media (min-width: 1200px) {
     .led-circle {
-        width: 100%;
-        max-width: 50vh;
-        height: 50vh;
+        width: 50vh;
     }
 }
 
@@ -537,11 +530,6 @@ button {
     .dropdown-container select {
         flex: 1;
         min-width: auto;
-    }
-
-    .led-circle {
-        max-width: 280px;
-        height: 280px;
     }
 
     .led {

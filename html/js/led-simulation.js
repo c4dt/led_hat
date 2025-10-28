@@ -160,11 +160,6 @@ class LEDSimulation {
   // Load example patterns
   loadExamplePattern(patternName = "wave") {
     const patterns = {
-      wave: {
-        red: "t x + sin 0.5 * 0.5 +",
-        green: "t 2 * y + cos 0.3 * 0.7 +",
-        blue: "x y + t 0.5 * + sin abs",
-      },
       rainbow: {
         red: "x sin 0.5 * 0.5 +",
         green: "x 0.667 + sin 0.5 * 0.5 +",
@@ -175,10 +170,15 @@ class LEDSimulation {
         green: "t 1.5 * sin abs",
         blue: "t sin abs",
       },
-      spiral: {
+      wave: {
         red: "t x 10 * + sin 0.5 * 0.5 +",
         green: "t x 10 * + 0.667 + sin 0.5 * 0.5 +",
         blue: "t x 10 * + 1.333 + sin 0.5 * 0.5 +",
+      },
+      spiral: {
+        red: "x y + t + sin 6 pow",
+        green: "x y + t + 0.2 + sin 6 pow",
+        blue: "x y + t + 0.4 + sin 6 pow",
       },
     };
 
