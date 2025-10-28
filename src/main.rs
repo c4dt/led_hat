@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
 use tower_http::{services::ServeDir, trace::TraceLayer};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::hat::{function::FormulaStrings, switch::HatState};
 
@@ -35,8 +36,15 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
+    let file_appender = tracing_appender::rolling::daily("./logs", "led-hat.log");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(non_blocking)
+                .with_ansi(false),
+        )
+        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stdout))
         .init();
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
