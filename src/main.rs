@@ -8,7 +8,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 use crate::hat::{function::FormulaStrings, switch::HatState};
 
@@ -35,6 +35,10 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
+
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
 
     let app_state = AppState { hat: shared_hat };
@@ -45,10 +49,11 @@ async fn main() {
         .route("/api/set_formulas", post(set_formulas))
         .route("/api/admin", post(admin))
         .nest_service("/", ServeDir::new("html"))
+        .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    println!("Server running on http://0.0.0.0:8080");
+    tracing::info!("Server running on http://0.0.0.0:8080");
 
     axum::serve(listener, app).await.unwrap();
 }
@@ -67,7 +72,7 @@ async fn set_formulas(
     State(state): State<AppState>,
     Json(payload): Json<FormulaStrings>,
 ) -> StatusCode {
-    println!("Got new formulas: {payload:?}");
+    tracing::info!("Got new formulas: {payload:?}");
     let mut hat = state.hat.lock().await;
     hat.add_formula(payload);
 
@@ -80,11 +85,11 @@ async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>)
         .unwrap_or_else(|| "".to_string());
 
     if admin_secret.is_empty() || payload.secret != admin_secret {
-        println!("Admin access denied: invalid secret");
+        tracing::warn!("Admin access denied: invalid secret");
         return StatusCode::UNAUTHORIZED;
     }
 
-    println!("Admin command: {:?}", payload.command);
+    tracing::info!("Admin command: {:?}", payload.command);
 
     let mut hat = state.hat.lock().await;
 
