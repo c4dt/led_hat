@@ -1,11 +1,14 @@
 # LED Hat
 
 Drive the LEDs on a hat with formulas.
-This repo is based on [Circle-LED](https://github.com/ineiti/circle-led).
-It uses the [Dioxus](https://github.com/DioxusLabs/dioxus/) for the backend
-and to display the frontend.
+![LED Hat](./led-hat.jpg)
 The LEDs are driven by an [Atom-Lite](https://docs.m5stack.com/en/core/ATOM%20Lite)
 which polls the server 20 times a second for an updated buffer.
+The server itself is built using axom, and allows for formulas sent by
+users, as well as some icons.
+An admin user can set the icons, and should also be able to create
+countdown timers.
+All of this has been created for the [Swiss Crypto Day - Halloween Edition](https://scd2025.c4dt.org).
 
 # User Interface
 
@@ -25,6 +28,7 @@ It shows the following buttons:
 - x' countdown (with an input field)
 - Reset countdown
 - User Access
+- Luminosity of the LEDs
 
 ## User Access
 
@@ -39,12 +43,9 @@ Else the system shows:
   - history of past formulas
 
 The supported formulas are:
-- cos(x)
-- sin(x)
-- sqrt(x)
-- exp(x)
-- pow(x)
-- abs(x)
+- + - / *
+- cos(x), sin(x), tan(x), acos(x), asin(x), atan(x)
+- sqrt(x), exp(x), pow(x, y), abs(x)
 
 The variables are:
 - x - going from -1 to 1, around the hat. 0 is in front.

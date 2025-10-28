@@ -32,7 +32,7 @@ jobs:
           enable-cache: "true"
 
       - name: Build servers
-        run: devbox run -- dx build --release
+        run: devbox run -- cargo build --release
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

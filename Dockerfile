@@ -2,13 +2,16 @@ FROM debian:bookworm-slim
 
 RUN apt update && apt install -y patchelf ca-certificates
 
-COPY target/dx/led_hat/release/web /web
-RUN patchelf --set-interpreter /usr/lib64/ld-linux-x86-64.so.2 /web/server
+RUN mkdir /web
+COPY target/release/led_hat /web
+COPY html /web/html
+RUN ls -R /web
+RUN patchelf --set-interpreter /usr/lib64/ld-linux-x86-64.so.2 /web/led_hat
 
 FROM debian:bookworm-slim
 WORKDIR /web
 COPY --from=0 /web /web
 COPY --from=0 /etc/ssl /etc/ssl
-ENV IP=0.0.0.0
+EXPOSE 8080
 
-ENTRYPOINT ["/web/server"]
+ENTRYPOINT ["/web/led_hat"]

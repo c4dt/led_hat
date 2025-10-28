@@ -4,8 +4,6 @@ services:
   ledhat:
     image: ghcr.io/c4dt/led_hat:latest
     build: .
-    ports:
-      - 8080:8080
     labels:
       - "traefik.enable=true"
       - "fqdn=ledhat.c4dt.org"

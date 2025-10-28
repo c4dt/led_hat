@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{env, sync::Arc};
 use tokio::sync::Mutex;
 use tower_http::services::ServeDir;
 
@@ -75,9 +75,11 @@ async fn set_formulas(
 }
 
 async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>) -> StatusCode {
-    const ADMIN_SECRET: &str = "admin123";
+    let admin_secret: String = env::var("LEDHAT_ADMIN")
+        .ok()
+        .unwrap_or_else(|| "".to_string());
 
-    if payload.secret != ADMIN_SECRET {
+    if admin_secret.is_empty() || payload.secret != admin_secret {
         println!("Admin access denied: invalid secret");
         return StatusCode::UNAUTHORIZED;
     }
