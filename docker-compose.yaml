@@ -1,16 +1,17 @@
-version: "3.8"
-
 services:
   ledhat:
     image: ghcr.io/c4dt/led_hat:latest
     build: .
+    environment:
+      # Enable the admin interface by giving a secret here.
+      - LEDHAT_ADMIN=""
     labels:
       - "traefik.enable=true"
-      - "fqdn=ledhat.c4dt.org"
+      - "fqdn=led-hat.example.com"
     networks:
       - traefik
 
 networks:
   traefik:
-    external:
-      name: traefik_traefik
+    name: traefik_traefik
+    external: true

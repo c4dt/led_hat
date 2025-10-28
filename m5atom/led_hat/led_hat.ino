@@ -13,11 +13,11 @@
 // Don't check into github...
 #include "wifi.h"
 
-// #define BASE_NAME "circle.gasser.blue"
-#define BASE_NAME "192.168.178.143"
+#define BASE_NAME "led-hat.c4dt.org"
+// #define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
-// #define BASE_URL "https://" BASE_NAME
-#define BASE_URL "http://" BASE_NAME ":8080"
+#define BASE_URL "https://" BASE_NAME
+// #define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
 #define REQUEST_FPS 20
@@ -80,8 +80,11 @@ HTTPClient http;
 bool http_begin(String url){
   http.setReuse(false);
   http.end();
-  // return http.begin(url, (const char*)NULL);
-  return http.begin(url);
+  if (url.startsWith("https://")){
+    return http.begin(url, (const char*)NULL);
+  } else {
+    return http.begin(url);
+  }
 }
 
 int request_start() {

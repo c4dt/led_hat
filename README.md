@@ -1,7 +1,9 @@
 # LED Hat
 
 Drive the LEDs on a hat with formulas.
-![LED Hat](./led-hat.jpg)
+
+![LED Hat](/led_hat.jpg)
+
 The LEDs are driven by an [Atom-Lite](https://docs.m5stack.com/en/core/ATOM%20Lite)
 which polls the server 20 times a second for an updated buffer.
 The server itself is built using axom, and allows for formulas sent by
