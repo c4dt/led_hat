@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::{env, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::{net::UdpSocket, sync::Mutex};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -49,6 +49,14 @@ async fn main() {
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
 
+    // Clone the hat for the UDP server
+    let udp_hat = shared_hat.clone();
+
+    // Spawn UDP server thread
+    tokio::spawn(async move {
+        udp_server(udp_hat).await;
+    });
+
     let app_state = AppState { hat: shared_hat };
 
     let app = Router::new()
@@ -66,9 +74,37 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+async fn udp_server(hat: SharedHat) {
+    let socket = UdpSocket::bind("0.0.0.0:8081").await.unwrap();
+    tracing::info!("UDP server listening on 0.0.0.0:8081");
+
+    let mut buf = [0; 1024];
+
+    loop {
+        match socket.recv_from(&mut buf).await {
+            Ok((_, addr)) => {
+                // Get LED data in binary format
+                let led_data = {
+                    let mut hat_guard = hat.lock().await;
+                    hat_guard.get_leds_binary()
+                };
+
+                // Send the binary LED data back
+                if let Err(e) = socket.send_to(&led_data, addr).await {
+                    tracing::error!("Failed to send UDP response: {}", e);
+                }
+            }
+            Err(e) => {
+                tracing::error!("UDP server error: {}", e);
+                break;
+            }
+        }
+    }
+}
+
 async fn get_leds(State(state): State<AppState>) -> String {
     let mut hat = state.hat.lock().await;
-    hat.get_leds()
+    hat.get_leds_string()
 }
 
 async fn get_status(State(state): State<AppState>) -> String {

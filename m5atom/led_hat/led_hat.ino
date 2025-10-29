@@ -13,11 +13,11 @@
 // Don't check into github...
 #include "wifi.h"
 
-#define BASE_NAME "led-hat.c4dt.org"
-// #define BASE_NAME "192.168.178.143"
+// #define BASE_NAME "led-hat.c4dt.org"
+#define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
-#define BASE_URL "https://" BASE_NAME
-// #define BASE_URL "http://" BASE_NAME ":8080"
+// #define BASE_URL "https://" BASE_NAME
+#define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
 #define REQUEST_FPS 20
@@ -155,7 +155,7 @@ void loop() {
 
 void show_LEDs_hex(const char *hexes) {
   for (int i = 0; i < NUMPIXELS; i++) {
-    pixels.setPixelColor(i, str2pix(hexes + i * 6));
+    // pixels.setPixelColor(i, str2pix(hexes + i * 6));
     pixels.setPixelColor(i, pixels.gamma32(str2pix(hexes + i * 6)));
   }
   pixels.show();
@@ -163,9 +163,10 @@ void show_LEDs_hex(const char *hexes) {
 
 void show_LEDs(uint8_t *rgb) {
   for (int i = 0; i < NUMPIXELS; i++) {
-    int j = NUMPIXELS - i;
-    pixels.setPixelColor(j,
-                         pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2]));
+    // pixels.setPixelColor(i,
+    //                      pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2]));
+    pixels.setPixelColor(i,
+                         pixels.gamma32(pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2])));
   }
   pixels.show();
 }
@@ -185,7 +186,7 @@ void state_wifi() {
 
 WiFiUDP client_udp;
 
-unsigned long last;
+unsigned long last = 0;
 
 void state_udp_read() {
   // WiFiSTAClass local;
@@ -324,9 +325,8 @@ void state_get_connect(){
 }
 
 void state_get_request() {
-  // http.setReuse(true);
+  http.setReuse(true);
 
-  unsigned long start = millis();
   int httpCode = http.GET();
   // Serial.printf("[HTTP] GET... code: %d\n", httpCode);
 
@@ -352,11 +352,13 @@ void state_get_request() {
   // http.end();
 
   unsigned long stop = millis();
-  Serial.printf("GET request duration: %ld..%ld = %ld\n", start, stop, stop - start);
-  stop = millis();
-  if (stop < start + REQUEST_INTERVAL) {
-    delay(REQUEST_INTERVAL - (stop - start));
+  if (stop < last + REQUEST_INTERVAL) {
+    Serial.printf("GET request duration: %ld..%ld = %ld\n", last, stop, stop - last);
+    delay(REQUEST_INTERVAL - (stop - last));
+  } else {
+    Serial.printf("GET request duration overflow: %ld..%ld = %ld\n", last, stop, stop - last);
   }
+  last = stop;
 }
 
 void fetch_button() {

@@ -137,6 +137,18 @@ impl LED {
         Self { red, green, blue }
     }
 
+    pub fn red(&self) -> u8 {
+        self.red
+    }
+
+    pub fn green(&self) -> u8 {
+        self.green
+    }
+
+    pub fn blue(&self) -> u8 {
+        self.blue
+    }
+
     pub fn from_hue(hue: u8) -> LED {
         let bright = hue % 64;
         let hue = hue / 64;

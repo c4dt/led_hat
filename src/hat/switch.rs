@@ -2,6 +2,7 @@ use crate::hat::{
     countdown::Countdown,
     function::{FormulaStrings, Function},
     icon::Icon,
+    leds::LED,
 };
 
 pub struct Switch {
@@ -27,18 +28,19 @@ impl Switch {
         }
     }
 
-    pub fn get_leds(&mut self) -> String {
-        let time = Self::get_time();
+    pub fn get_leds_string(&mut self) -> String {
+        self.get_leds()
+            .iter()
+            .map(|led| led.to_string())
+            .collect::<Vec<_>>()
+            .join("")
+    }
 
-        match self.state {
-            HatState::Function => self.function.get_leds(time),
-            HatState::Icon => self.icons.get_leds(time),
-            HatState::Countdown => self.countdown.get_leds(time),
-        }
-        .iter()
-        .map(|led| led.to_string())
-        .collect::<Vec<_>>()
-        .join("")
+    pub fn get_leds_binary(&mut self) -> Vec<u8> {
+        self.get_leds()
+            .iter()
+            .flat_map(|led| vec![led.red(), led.green(), led.blue()])
+            .collect()
     }
 
     pub fn get_status(&self) -> String {
@@ -63,5 +65,15 @@ impl Switch {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis()
+    }
+
+    fn get_leds(&mut self) -> Vec<LED> {
+        let time = Self::get_time();
+
+        match self.state {
+            HatState::Function => self.function.get_leds(time),
+            HatState::Icon => self.icons.get_leds(time),
+            HatState::Countdown => self.countdown.get_leds(time),
+        }
     }
 }
