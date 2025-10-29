@@ -14,20 +14,19 @@
 #include "wifi.h"
 
 // #define BASE_NAME "led-hat.c4dt.org"
-#define BASE_NAME "192.168.178.143"
+#define BASE_NAME "led-hat.ineiti.ch"
+// #define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
-// #define BASE_URL "https://" BASE_NAME
-#define BASE_URL "http://" BASE_NAME ":8080"
+#define BASE_URL "https://" BASE_NAME
+// #define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
-#define REQUEST_FPS 20
+#define REQUEST_FPS 50
 #define REQUEST_INTERVAL 1000 / REQUEST_FPS
 
 #define PIN_STRIP 26
 #define PIN_LED 27
 #define NUMPIXELS 300
-
-#define UDP_WAIT_MS 20
 
 // Doesn't work because of __enable_irq()!
 // #include <PololuLedStrip.h>
@@ -36,72 +35,27 @@
 
 #include <Adafruit_NeoPixel.h>
 
-// With the Brack LED-line, it's NEO_RGBW
-// With the Circle, it's NEO_GRB
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN_STRIP, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel led(1, PIN_LED, NEO_GRB + NEO_KHZ800);
-
-static uint8_t hex2u8(const char *c) {
-  uint8_t high = *c % 16 + 9 * (*c / 97);
-  c++;
-  uint8_t low = *c % 16 + 9 * (*c / 97);
-  return low + (high << 4);
-}
-
-static uint32_t str2pix(const char *c) {
-  // return pixels.Color(hex2u8(c) >> 4, hex2u8(c + 2) >> 4, hex2u8(c + 4) >> 4);
-  return pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4));
-  // return pixels.gamma32(pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4)));
-}
 
 #define STATE_WIFI 0
 void state_wifi();
 #define STATE_UDP_READ 1
 void state_udp_read();
-#define STATE_SSE_CONNECT 2
-void state_sse_connect();
-#define STATE_SSE_STREAM 3
-void state_sse_stream();
-#define STATE_GET_CONNECT 4
+#define STATE_GET_CONNECT 2
 void state_get_connect();
-#define STATE_GET_REQUEST 5
+#define STATE_GET_REQUEST 3
 void state_get_request();
 
 #define REQUEST_UDP 0
-#define REQUEST_SSE 1
-#define REQUEST_GET 2
+#define REQUEST_GET 1
 
-int request = REQUEST_GET;
+int request = REQUEST_UDP;
 WiFiMulti wifiMulti;
 int state = 0;
+unsigned long last = 0;
 
 HTTPClient http;
-
-bool http_begin(String url){
-  http.setReuse(false);
-  http.end();
-  if (url.startsWith("https://")){
-    return http.begin(url, (const char*)NULL);
-  } else {
-    return http.begin(url);
-  }
-}
-
-int request_start() {
-  Serial.printf("Request is %d\n", request);
-  for (int i = 0; i < 3; i++) {
-    pixels.setPixelColor(i+1, pixels.ColorHSV(0x7fff, 0x7f, (request == i) << 7));
-  }
-
-  switch (request) {
-    case REQUEST_GET:
-      return STATE_GET_CONNECT;
-    case REQUEST_SSE:
-      return STATE_SSE_CONNECT;
-    case REQUEST_UDP:
-      return STATE_UDP_READ;
-  }
-}
 
 void setup() {
   M5.begin(true, false, false);
@@ -114,10 +68,6 @@ void setup() {
   pixels.begin();
   pixels.setBrightness(128);
   pixels.clear();
-  // for (uint16_t i = 0; i < NUMPIXELS; i++) {
-  //   pixels.setPixelColor(i, pixels.gamma32(pixels.ColorHSV((i % 8) << 13, 0x7f + (i & 0x10) << 3, 0x7f + (i & 0x20) << 3)));
-  // }
-  // pixels.setPixelColor(NUMPIXELS - 1, 0);
 
   led.begin();
   led.setPixelColor(0, pixels.Color(32, 0, 0));
@@ -125,32 +75,45 @@ void setup() {
 }
 
 void loop() {
+  fetch_button();
   switch (state) {
     case STATE_WIFI:
       state_wifi();
+      return;
       break;
     case STATE_UDP_READ:
       state_udp_read();
       break;
-    case STATE_SSE_CONNECT:
-      state_sse_connect();
-      break;
-    case STATE_SSE_STREAM:
-      state_sse_stream();
-      break;
     case STATE_GET_CONNECT:
       state_get_connect();
+      return;
       break;
     case STATE_GET_REQUEST:
       state_get_request();
       break;
   }
 
-  // for (int i = 0; i < 8; i++) {
-  //   pixels.setPixelColor(NUMPIXELS - 4 - i, pixels.ColorHSV(0x7fff, 0x7f, (state == i) << 7));
-  // }
+  unsigned long now = millis();
+  if (now < REQUEST_INTERVAL + last){
+    Serial.printf("Request duration: %ld..%ld = %ld\n", last, now, now - last);
+    delay(REQUEST_INTERVAL + last - now);
+  } else {
+    Serial.printf("Request duration overflow: %ld..%ld = %ld\n", last, now, now - last);
+  }
+  last = millis();
+}
 
-  fetch_button();
+static uint8_t hex2u8(const char *c) {
+  uint8_t high = *c % 16 + 9 * (*c / 97);
+  c++;
+  uint8_t low = *c % 16 + 9 * (*c / 97);
+  return low + (high << 4);
+}
+
+static uint32_t str2pix(const char *c) {
+  // return pixels.Color(hex2u8(c) >> 4, hex2u8(c + 2) >> 4, hex2u8(c + 4) >> 4);
+  return pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4));
+  // return pixels.gamma32(pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4)));
 }
 
 void show_LEDs_hex(const char *hexes) {
@@ -184,9 +147,27 @@ void state_wifi() {
   }
 }
 
-WiFiUDP client_udp;
+bool http_begin(String url){
+  http.setReuse(false);
+  http.end();
+  if (url.startsWith("https://")){
+    return http.begin(url, (const char*)NULL);
+  } else {
+    return http.begin(url);
+  }
+}
 
-unsigned long last = 0;
+int request_start() {
+  Serial.printf("Request is %d\n", request);
+  switch (request) {
+    case REQUEST_GET:
+      return STATE_GET_CONNECT;
+    case REQUEST_UDP:
+      return STATE_UDP_READ;
+  }
+}
+
+WiFiUDP client_udp;
 
 void state_udp_read() {
   // WiFiSTAClass local;
@@ -197,13 +178,13 @@ void state_udp_read() {
   client_udp.write(0x30);
   client_udp.endPacket();
 
-  int count = UDP_WAIT_MS / 10;
+  int count = 10;
   while (client_udp.parsePacket() == 0) {
     if (count-- == 0) {
-      Serial.printf("%06ld (%03d): Didn't get a reply in %dms\n", millis(), millis() - last, UDP_WAIT_MS);
+      Serial.printf("%06ld (%03d): Didn't get a reply in %dms\n", millis(), millis() - last, REQUEST_INTERVAL);
       return;
     }
-    delay(10);
+    delay(REQUEST_INTERVAL/10);
   }
   int bufLen = NUMPIXELS * 3;
   uint8_t buf[bufLen + 1];
@@ -212,105 +193,6 @@ void state_udp_read() {
     Serial.printf("%06ld (%03d): Only got %d out of %d bytes\n", millis(), millis() - last, res, bufLen);
   } else {
     show_LEDs(buf);
-  }
-  // buf[10] = 0;
-  // Serial.printf("%06ld: Read %d bytes, starting with: %s\n", millis() - last, res, buf);
-  last = millis();
-}
-
-unsigned long next_read;
-unsigned long read_interval;
-
-void state_sse_connect() {
-  Serial.println("Requesting the SSE endpoint");
-  String url = String(BASE_URL "/get_circle");
-  http.setReuse(false);
-  http_begin(url);
-
-  Serial.printf("Connecting to %s\n", url.c_str());
-  int httpCode = http.GET();
-  if (httpCode > 0) {
-
-    if (httpCode == HTTP_CODE_OK) {
-      read_interval = REQUEST_INTERVAL;
-      next_read = millis() + read_interval;
-      state = STATE_SSE_STREAM;
-    } else {
-      Serial.printf("Error code: %i\n", httpCode);
-    }
-  } else {
-    Serial.printf("[HTTP] GET... failed, error: %s\n",
-                  http.errorToString(httpCode).c_str());
-  }
-
-  // Serial.println("Now for the api one");
-  // http_begin("https://circle.gasser.blue/api/get_circle");
-  // http.GET();
-
-  // Serial.println("and for a post_request");
-  // state_get_request();
-
-  // Serial.println("Waiting");
-  // delay(10000);
-
-  // state = STATE_SSE_CONNECT;
-}
-
-void state_sse_stream() {
-  WiFiClient *client = http.getStreamPtr();
-
-  unsigned long start = millis();
-  if (start < next_read) {
-    delay(next_read - start);
-  } else {
-    Serial.printf("Out of sync by %d - interval: %d\n", next_read - start, read_interval);
-  }
-
-  int bufLen = NUMPIXELS * 6 + 15;
-  if (client->available() < bufLen) {
-    int loop = 10;
-    for (; client->available() < bufLen; loop--) {
-      if (loop == 0) {
-        Serial.println("Didn't get any bytes after 500ms - reconnecting");
-        state = STATE_SSE_CONNECT;
-        return;
-      }
-      delay(10);
-      next_read += 10;
-    }
-    Serial.printf("%05ld: No bytes available for %d loops\n", millis(), 10 - loop);
-    read_interval += 5;
-  } else if (client->available() < 2 * bufLen) {
-    // read_interval += 2;
-  } else if (client->available() < 3 * bufLen) {
-    read_interval++;
-    // } else if (client.available() < 4 * bufLen) {
-    //   read_interval++;
-  } else if (client->available() >= 4 * bufLen && read_interval > 20) {
-    read_interval--;
-  }
-  next_read += read_interval;
-
-  uint8_t buf[bufLen + 1];
-  int read = client->read(buf, bufLen);
-  if (read != bufLen) {
-    Serial.printf("%05ld: Only read %d instead of %d bytes\n", millis(), read, bufLen);
-    return;
-  }
-  buf[read] = 0;
-
-  char *hexes = (char *)buf + 11;
-  // Serial.println((char*)buf);
-  // Serial.println(hexes);
-
-  show_LEDs_hex(hexes);
-
-  // buf[20] = 0;
-  // Serial.printf("%s\n%s\n", buf, hexes);
-
-  Serial.printf("%05ld + %2d: %05ld, avail: %f\n", millis(), read_interval, next_read, client->available() / (float)bufLen);
-  if (client->available() == 0) {
-    next_read += 10;
   }
 }
 
@@ -350,29 +232,23 @@ void state_get_request() {
   }
 
   // http.end();
-
-  unsigned long stop = millis();
-  if (stop < last + REQUEST_INTERVAL) {
-    Serial.printf("GET request duration: %ld..%ld = %ld\n", last, stop, stop - last);
-    delay(REQUEST_INTERVAL - (stop - last));
-  } else {
-    Serial.printf("GET request duration overflow: %ld..%ld = %ld\n", last, stop, stop - last);
-  }
-  last = stop;
 }
 
 void fetch_button() {
   if (M5.Btn.read() == 1) {
-    http_begin(BASE_URL "/api/game_reset");
-    led.setPixelColor(0, pixels.Color(32, 32, 0));
-    led.show();
-    int httpCode = http.GET();
-    led.setPixelColor(0, pixels.Color(0, 32, 0));
-    led.show();
-    // Serial.printf("Sent reset with code: %d\n", httpCode);
-    request = (request + 1) % 3;
+    request = (request + 1) % 2;
     state = request_start();
 
+    led.setPixelColor(0, pixels.Color(32, 32, 0));
+    led.show();
+
     delay(1000);
+
+    if (request == 0){
+      led.setPixelColor(0, pixels.Color(0, 32, 0));
+    } else if (request == 1){
+      led.setPixelColor(0, pixels.Color(0, 0, 32));
+    }
+    led.show();
   }
 }
