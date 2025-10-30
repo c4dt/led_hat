@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{hat::{
-    countdown::Countdown,
-    function::{FormulaStrings, Function},
-    icon::{Icon, IconType},
-    leds::LED,
-}, AdminCommand};
+use crate::{
+    hat::{
+        countdown::Countdown,
+        function::{FormulaStrings, Function},
+        icon::{Icon, IconType},
+        leds::LED,
+    },
+    AdminCommand,
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HatStatus {
@@ -56,7 +59,9 @@ impl Switch {
             command: match self.state {
                 HatState::Function => AdminCommand::AllowFunction,
                 HatState::Icon => AdminCommand::Icon(self.icons.get_icon()),
-                HatState::Countdown => todo!(),
+                HatState::Countdown => {
+                    AdminCommand::Countdown(self.countdown.get_minutes(Self::get_time()))
+                }
             },
             formulas_queue: self.function.queue_len(),
         }

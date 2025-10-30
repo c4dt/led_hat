@@ -353,8 +353,8 @@ class UserInterface {
       });
 
       if (response.ok) {
-        const status = await response.text();
-        this.updateHatStatus(status.trim());
+        const status = await response.json();
+        this.updateHatStatus(status);
       } else {
         this.updateHatStatus("offline");
       }
@@ -368,7 +368,20 @@ class UserInterface {
     const sendBtn = document.getElementById("send-hat-btn");
     const accessText = document.getElementById("access-text");
 
-    const isReady = status === "Function";
+    // Check if offline
+    if (status === "offline") {
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Hat Offline";
+      }
+      if (accessText) {
+        accessText.textContent = "Hat is offline";
+      }
+      return;
+    }
+
+    // Check if in Function mode (ready to receive formulas)
+    const isReady = status.command === "AllowFunction";
 
     // Update button state
     if (sendBtn) {
@@ -378,10 +391,12 @@ class UserInterface {
 
     // Update access text display
     if (accessText) {
-      if (status === "offline") {
-        accessText.textContent = "Hat is offline";
-      } else if (isReady) {
-        accessText.textContent = "Hat is ready";
+      if (isReady) {
+        accessText.textContent = `Hat is ready (${status.formulas_queue} in queue)`;
+      } else if (status.command && status.command.Countdown !== undefined) {
+        accessText.textContent = "Hat is in countdown mode";
+      } else if (status.command && status.command.Icon) {
+        accessText.textContent = "Hat is showing an icon";
       } else {
         accessText.textContent = "Hat is busy";
       }

@@ -30,22 +30,27 @@ impl Countdown {
             let (left_s, left_m) = (left % 60, left / 60);
             let print = format!("{left_m:02}:{left_s:02}");
             let on = LED::from_rgb(0x80, 0x80, 0x80);
-            let off = LED::black();
             for y in 0..8 {
                 for c in 0..5 {
                     let char = DIGITS[(print.as_bytes()[c] - b'0') as usize][7 - y];
                     for b in 0..8 {
-                        self.leds.set_u(
-                            c * 8 + b,
-                            y,
-                            if (char >> b) & 1 == 1 { &on } else { &off },
-                        );
+                        if (char >> b) & 1 == 1 {
+                            self.leds.set_u(c * 8 + b, y, on.clone());
+                        }
                     }
                 }
             }
         }
         self.leds.brightness(0.5);
         self.leds.leds.clone()
+    }
+
+    pub fn get_minutes(&self, now: u128) -> u128 {
+        if now < self.end_ms {
+            (self.end_ms - now) / 1000
+        } else {
+            0
+        }
     }
 }
 

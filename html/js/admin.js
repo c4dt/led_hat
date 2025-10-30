@@ -13,6 +13,7 @@ class AdminInterface {
         // Check if already authenticated (from sessionStorage)
         const savedAuth = sessionStorage.getItem('admin_authenticated');
         if (savedAuth === 'true') {
+            this.authenticated = true;
             this.showAdminPanel();
         }
 
@@ -71,6 +72,7 @@ class AdminInterface {
 
             if (response.ok) {
                 this.updateTimer();
+                this.updateStatus();
                 this.showSuccessMessage(`${minutes} minute countdown started`);
             } else {
                 this.showErrorMessage('Failed to set countdown - check admin secret');
@@ -130,31 +132,43 @@ class AdminInterface {
     async updateTimer() {
         try {
             const response = await fetch(`${this.apiBaseUrl}/api/get_status`);
-            const data = await response.json();
+            const status = await response.json();
 
             const timeRemaining = document.getElementById('time-remaining');
             const timerStatus = document.getElementById('timer-status');
             const timerDisplay = document.querySelector('.timer-display');
 
-            if (data.countdown_active) {
-                const remainingMs = data.remaining_time;
-                const minutes = Math.floor(remainingMs / 60000);
-                const seconds = Math.floor((remainingMs % 60000) / 1000);
+            // Check if command is Countdown
+            if (status.command && status.command.Countdown !== undefined) {
+                // Countdown is active - value is in seconds
+                const totalSeconds = status.command.Countdown;
+                const displayMinutes = Math.floor(totalSeconds / 60);
+                const displaySeconds = Math.floor(totalSeconds % 60);
 
-                timeRemaining.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 timerStatus.textContent = 'Countdown Active';
+                timerDisplay.classList.add('active');
+                timerDisplay.classList.remove('expired');
+                timeRemaining.textContent = `${displayMinutes.toString().padStart(2, '0')}:${displaySeconds.toString().padStart(2, '0')}`;
 
-                if (remainingMs <= 0) {
+                // Check if expired
+                if (totalSeconds <= 0) {
                     timerDisplay.classList.add('expired');
+                    timerDisplay.classList.remove('active');
                     timerStatus.textContent = 'Countdown Expired';
-                } else {
-                    timerDisplay.classList.add('active');
-                    timerDisplay.classList.remove('expired');
                 }
             } else {
+                // No countdown active
                 timeRemaining.textContent = '--:--';
-                timerStatus.textContent = 'No Timer Active';
                 timerDisplay.classList.remove('active', 'expired');
+
+                // Show current mode
+                if (status.command === 'AllowFunction') {
+                    timerStatus.textContent = 'Function Mode';
+                } else if (status.command && status.command.Icon) {
+                    timerStatus.textContent = `Icon Mode: ${status.command.Icon}`;
+                } else {
+                    timerStatus.textContent = 'Unknown Mode';
+                }
             }
         } catch (error) {
             console.error('Error updating timer:', error);
@@ -162,20 +176,39 @@ class AdminInterface {
     }
 
     async updateStats() {
-        // Note: Backend doesn't have a stats endpoint yet
-        // Using placeholder values
-        document.getElementById('active-connections').textContent = 'N/A';
-        document.getElementById('formulas-today').textContent = 'N/A';
-        document.getElementById('system-uptime').textContent = 'N/A';
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/get_status`);
+            const status = await response.json();
+
+            // Update formulas queue from status
+            document.getElementById('formulas-today').textContent = status.formulas_queue || '0';
+
+            // Other stats not yet implemented
+            document.getElementById('active-connections').textContent = 'N/A';
+            document.getElementById('system-uptime').textContent = 'N/A';
+        } catch (error) {
+            console.error('Error updating stats:', error);
+        }
     }
 
     async updateStatus() {
         try {
             const response = await fetch(`${this.apiBaseUrl}/api/get_status`);
-            const data = await response.json();
+            const status = await response.json();
 
             const statusText = document.getElementById('status-text');
-            statusText.textContent = `System Status: ${data.state || 'Unknown'}`;
+
+            // Determine current mode from command
+            let mode = 'Unknown';
+            if (status.command === 'AllowFunction') {
+                mode = 'Function Mode';
+            } else if (status.command && status.command.Countdown !== undefined) {
+                mode = 'Countdown Mode';
+            } else if (status.command && status.command.Icon) {
+                mode = 'Icon Mode';
+            }
+
+            statusText.textContent = `System Status: ${mode}`;
         } catch (error) {
             console.error('Error updating status:', error);
             document.getElementById('status-text').textContent = 'System Status: Error';
@@ -207,32 +240,45 @@ class AdminInterface {
     }
 
     showSuccessMessage(message) {
-        // You could implement a toast notification here
         console.log('Success:', message);
-        alert(message); // Simple alert for now
+        // Display message in status text temporarily
+        const statusText = document.getElementById('status-text');
+        if (statusText) {
+            const originalText = statusText.textContent;
+            statusText.textContent = `✓ ${message}`;
+            statusText.style.color = '#4CAF50';
+            setTimeout(() => {
+                statusText.textContent = originalText;
+                statusText.style.color = '';
+            }, 3000);
+        }
     }
 
     showErrorMessage(message) {
-        // You could implement a toast notification here
         console.error('Error:', message);
-        alert(`Error: ${message}`); // Simple alert for now
+        // Display error in status text temporarily
+        const statusText = document.getElementById('status-text');
+        if (statusText) {
+            const originalText = statusText.textContent;
+            statusText.textContent = `✗ ${message}`;
+            statusText.style.color = '#f44336';
+            setTimeout(() => {
+                statusText.textContent = originalText;
+                statusText.style.color = '';
+            }, 3000);
+        }
     }
 
     startPeriodicUpdates() {
-        // Update timer every second
+        // Update timer, status, and stats every 2 seconds
         this.timerInterval = setInterval(() => {
             if (this.authenticated) {
                 this.updateTimer();
-            }
-        }, 1000);
-
-        // Update stats every 30 seconds
-        this.statsInterval = setInterval(() => {
-            if (this.authenticated) {
                 this.updateStats();
             }
+            // Always update status (visible before auth)
             this.updateStatus();
-        }, 30000);
+        }, 2000);
     }
 }
 

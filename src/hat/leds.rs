@@ -78,18 +78,21 @@ impl LEDCriss {
         }
     }
 
-    pub fn set_u(&mut self, x: usize, y: usize, led: &LED) {
-        self.set(x as f32, y as f32, led);
+    pub fn set_u(&mut self, x: usize, y: usize, led: LED) {
+        let index = (y * self.circum) + x;
+        if index % 2 == 0 {
+            self.leds[index / 2] = led;
+        }
     }
 
     pub fn fill(&mut self, led: &LED) {
-        for i in 0..self.leds.len(){
+        for i in 0..self.leds.len() {
             self.leds[i] = led.clone();
         }
     }
 
-    pub fn brightness(&mut self, bright: f32){
-        for led in &mut self.leds{
+    pub fn brightness(&mut self, bright: f32) {
+        for led in &mut self.leds {
             *led = led.brightness(bright);
         }
     }
