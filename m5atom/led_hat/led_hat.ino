@@ -17,8 +17,8 @@
 // #define BASE_NAME "led-hat.ineiti.ch"
 #define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
-// #define BASE_URL "https://" BASE_NAME
-#define BASE_URL "http://" BASE_NAME ":8080"
+#define BASE_URL "https://" BASE_NAME
+// #define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
 #define REQUEST_FPS 50
@@ -94,11 +94,11 @@ void loop() {
   }
 
   unsigned long now = millis();
-  if (now < REQUEST_INTERVAL + last){
-    Serial.printf("Request duration: %ld..%ld = %ld\n", last, now, now - last);
+  if (now <= REQUEST_INTERVAL + last){
+    // Serial.printf("Request duration: %ld..%ld = %ld\n", last, now, now - last);
     delay(REQUEST_INTERVAL + last - now);
-  } else {
-    Serial.printf("Request duration overflow: %ld..%ld = %ld\n", last, now, now - last);
+  // } else {
+  //   Serial.printf("Request duration overflow: %ld..%ld = %ld\n", last, now, now - last);
   }
   last = millis();
 }

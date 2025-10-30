@@ -45,8 +45,10 @@ impl Function {
     }
 
     pub fn add_formula(&mut self, fs: FormulaStrings) {
-        self.queue
-            .push_back(Formula::new(fs.red, fs.green, fs.blue));
+        let formula = Formula::new(fs.red, fs.green, fs.blue);
+        if !self.queue.contains(&formula) {
+            self.queue.push_back(formula);
+        }
     }
 
     pub fn _clear_queue(&mut self) {
@@ -106,6 +108,7 @@ impl Function {
 }
 
 // Stores one formula
+#[derive(PartialEq)]
 struct Formula {
     // The raw formula as received from the frontend.
     // It comes as one string per color.

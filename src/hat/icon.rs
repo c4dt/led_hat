@@ -8,6 +8,7 @@ pub enum IconType {
     Test,
     Pumpkin,
     Fish,
+    Pacman,
 }
 
 pub struct Icon {
@@ -42,7 +43,7 @@ impl Icon {
             }
             IconType::Pumpkin => {
                 self.draw_icon(
-                    40. + ((time as f64 / 2000.).sin() * 3.) as f32,
+                    20. + ((time as f64 / 2000.).sin() * 3.) as f32,
                     0.,
                     r#"
                     000011111111111111000
@@ -59,7 +60,7 @@ impl Icon {
             }
             IconType::Fish => {
                 self.draw_icon(
-                    40. + ((time as f64 / 2000.).sin() * 3.) as f32,
+                    ((time % 37000) as f64 / 500.) as f32,
                     0.,
                     r#"
                     00000000000000000000000
@@ -75,6 +76,21 @@ impl Icon {
                     vec![LED::black(), LED::from_hex("204040")],
                 );
             }
+            IconType::Pacman => {
+                let posx = (time % 74000) / 100;
+                let pacman_index = (((posx as i32 / 1) % 7) - 3).abs() as usize;
+                let pacman = PACMAN[pacman_index];
+                self.draw_icon(
+                    posx as f32 / 2.,
+                    0.,
+                    pacman,
+                    vec![
+                        LED::black(),
+                        LED::from_hex("303010"),
+                        LED::from_hex("a05050"),
+                    ],
+                );
+            }
         }
         self.leds.leds.clone()
     }
@@ -83,7 +99,9 @@ impl Icon {
         self.icon.clone()
     }
 
-    fn draw_icon(&mut self, pos_x: f32, mut pos_y: f32, pattern: &str, colors: Vec<LED>) {
+    fn draw_icon(&mut self, mut pos_x: f32, mut pos_y: f32, pattern: &str, colors: Vec<LED>) {
+        let width = self.leds.range.0 as f32;
+        pos_x = (pos_x / width).fract() * width;
         self.leds.clear();
         let pattern_lines = pattern
             .split("\n")
@@ -111,3 +129,46 @@ mod test {
     #[test]
     fn test_draw_led() {}
 }
+
+const PACMAN: [&str; 4] = [
+    r#"
+                    000000001111100000000
+                    000001111112111100000
+                    000111111122111111000
+                    001111111111111111100
+                    001111111111111111100
+                    000111111111111111000
+                    000001111111111100000
+                    000000001111100000000
+                    "#,
+    r#"
+                    000000001111100000000
+                    000001111112111100000
+                    000111111122111111000
+                    001111111111111111000
+                    001111111100000000000
+                    000111111111111111000
+                    000001111111111100000
+                    000000001111100000000
+                    "#,
+    r#"
+                    000000001111100000000
+                    000001111112111100000
+                    000111111122111111000
+                    001111111100000000000
+                    001111111100000000000
+                    000111111111111111000
+                    000001111111111100000
+                    000000001111100000000
+                    "#,
+    r#"
+                    000000001111100000000
+                    000001111112111100000
+                    000111111122110000000
+                    001111111100000000000
+                    001111111100000000000
+                    000111111111110000000
+                    000001111111111100000
+                    000000001111100000000
+                    "#,
+];

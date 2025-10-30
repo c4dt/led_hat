@@ -54,7 +54,7 @@ async fn main() {
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
     {
-        shared_hat.lock().await.show_icon(IconType::Pumpkin);
+        shared_hat.lock().await.show_icon(IconType::Fish);
         // shared_hat.lock().await.set_state(HatState::Function);
         // shared_hat.lock().await.start_countdown(1000);
     }
@@ -119,7 +119,7 @@ async fn get_leds(State(state): State<AppState>) -> String {
 }
 
 async fn get_icons() -> String {
-    "Empty,Test,Pumpkin,Fish".into()
+    "Empty,Test,Pumpkin,Fish,Pacman".into()
 }
 
 async fn get_status(State(state): State<AppState>) -> Json<HatStatus> {

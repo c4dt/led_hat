@@ -33,7 +33,7 @@ impl Switch {
     pub fn new(leds: usize, circum: usize) -> Self {
         Switch {
             icons: Icon::new(leds, circum),
-            function: Function::new(leds, circum, 1, 10),
+            function: Function::new(leds, circum, 1000, 10000),
             countdown: Countdown::new(leds, circum),
             state: HatState::Function,
         }
