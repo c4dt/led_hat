@@ -126,6 +126,7 @@ button {
 }
 
 .countdown-section,
+.icon-section,
 .system-section,
 .stats-section {
     background: rgba(255, 255, 255, 0.1);
@@ -138,6 +139,7 @@ button {
 }
 
 .countdown-section h2,
+.icon-section h2,
 .system-section h2,
 .stats-section h2 {
     margin-bottom: 20px;
@@ -228,6 +230,47 @@ button {
     color: #333;
     width: 120px;
     font-size: 16px;
+}
+
+.icon-section {
+    grid-column: 1 / -1;
+}
+
+.icon-controls {
+    margin-top: 10px;
+}
+
+.icon-selector {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.icon-selector label {
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.icon-selector select {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    font-size: 16px;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.icon-selector select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+#show-icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .system-btn {

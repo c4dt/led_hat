@@ -5,11 +5,15 @@ class AdminInterface {
         this.authenticated = false;
         this.timerInterval = null;
         this.statsInterval = null;
+        this.availableIcons = [];
 
         this.initializeInterface();
     }
 
-    initializeInterface() {
+    async initializeInterface() {
+        // Load available icons first
+        await this.loadIcons();
+
         // Check if already authenticated (from sessionStorage)
         const savedAuth = sessionStorage.getItem('admin_authenticated');
         if (savedAuth === 'true') {
@@ -52,6 +56,113 @@ class AdminInterface {
         document.getElementById('admin-panel').style.display = 'block';
         this.updateTimer();
         this.updateStats();
+        this.setupIconSelector();
+    }
+
+    logout() {
+        // Clear authentication
+        this.authenticated = false;
+        sessionStorage.removeItem('admin_secret');
+        sessionStorage.removeItem('admin_authenticated');
+
+        // Show auth section, hide admin panel
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('admin-panel').style.display = 'none';
+
+        // Clear the password field
+        const secretInput = document.getElementById('admin-secret');
+        if (secretInput) {
+            secretInput.value = '';
+        }
+
+        // Show error message
+        this.showError('Authentication failed - please enter the correct admin secret');
+    }
+
+    handleUnauthorized() {
+        console.warn('Unauthorized access detected - logging out');
+        this.logout();
+    }
+
+    async loadIcons() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/api/get_icons`);
+            const iconsText = await response.text();
+
+            // Parse comma-separated icon names
+            this.availableIcons = iconsText.split(',').map(icon => icon.trim());
+        } catch (error) {
+            console.error('Error loading icons:', error);
+            this.availableIcons = [];
+        }
+    }
+
+    setupIconSelector() {
+        const iconSelect = document.getElementById('icon-select');
+        const showIconBtn = document.getElementById('show-icon-btn');
+
+        if (!iconSelect || !this.availableIcons || this.availableIcons.length === 0) {
+            console.warn('Icon selector setup failed - no icons available');
+            return;
+        }
+
+        // Populate dropdown with available icons
+        iconSelect.innerHTML = '<option value="">Choose an icon...</option>';
+        this.availableIcons.forEach(icon => {
+            const option = document.createElement('option');
+            option.value = icon;
+            option.textContent = icon;
+            iconSelect.appendChild(option);
+        });
+
+        console.log('Icon selector populated with:', this.availableIcons);
+
+        // Enable/disable button based on selection
+        iconSelect.addEventListener('change', () => {
+            showIconBtn.disabled = !iconSelect.value;
+            if (iconSelect.value) {
+                showIconBtn.textContent = `Show ${iconSelect.value}`;
+            } else {
+                showIconBtn.textContent = 'Show Icon';
+            }
+        });
+    }
+
+    async showSelectedIcon() {
+        const iconSelect = document.getElementById('icon-select');
+        const selectedIcon = iconSelect?.value;
+
+        if (!selectedIcon) {
+            this.showErrorMessage('Please select an icon first');
+            return;
+        }
+
+        try {
+            const secret = sessionStorage.getItem('admin_secret');
+
+            const response = await fetch(`${this.apiBaseUrl}/api/admin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    secret: secret,
+                    command: { Icon: selectedIcon }
+                })
+            });
+
+            if (response.ok) {
+                this.updateStatus();
+                this.showSuccessMessage(`${selectedIcon} icon displayed`);
+            } else if (response.status === 401) {
+                this.handleUnauthorized();
+            } else {
+                this.showErrorMessage('Failed to show icon');
+            }
+        } catch (error) {
+            console.error('Error showing icon:', error);
+            this.showErrorMessage('Failed to show icon');
+        }
     }
 
     async setCountdown(minutes) {
@@ -74,8 +185,10 @@ class AdminInterface {
                 this.updateTimer();
                 this.updateStatus();
                 this.showSuccessMessage(`${minutes} minute countdown started`);
+            } else if (response.status === 401) {
+                this.handleUnauthorized();
             } else {
-                this.showErrorMessage('Failed to set countdown - check admin secret');
+                this.showErrorMessage('Failed to set countdown');
             }
         } catch (error) {
             console.error('Error setting countdown:', error);
@@ -114,8 +227,10 @@ class AdminInterface {
             if (response.ok) {
                 this.updateStatus();
                 this.showSuccessMessage('Function mode enabled');
+            } else if (response.status === 401) {
+                this.handleUnauthorized();
             } else {
-                this.showErrorMessage('Failed to enable function mode - check admin secret');
+                this.showErrorMessage('Failed to enable function mode');
             }
         } catch (error) {
             console.error('Error enabling function mode:', error);
@@ -266,6 +381,10 @@ function setCustomCountdown() {
 
 function allowFunction() {
     adminInterface.allowFunction();
+}
+
+function showSelectedIcon() {
+    adminInterface.showSelectedIcon();
 }
 
 // Initialize when DOM is loaded

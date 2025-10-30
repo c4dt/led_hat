@@ -71,6 +71,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/get_leds", get(get_leds))
+        .route("/api/get_icons", get(get_icons))
         .route("/api/get_status", get(get_status))
         .route("/api/set_formulas", post(set_formulas))
         .route("/api/admin", post(admin))
@@ -115,6 +116,10 @@ async fn udp_server(hat: SharedHat) {
 async fn get_leds(State(state): State<AppState>) -> String {
     let mut hat = state.hat.lock().await;
     hat.get_leds_string()
+}
+
+async fn get_icons() -> String {
+    "Empty,Test,Pumpkin,Fish".into()
 }
 
 async fn get_status(State(state): State<AppState>) -> Json<HatStatus> {

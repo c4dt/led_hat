@@ -28,6 +28,9 @@ class UserInterface {
 
     // Check backend connectivity
     this.checkBackendConnectivity();
+
+    // Start periodic status polling every 5 seconds
+    this.startPeriodicStatusUpdates();
   }
 
   setupEventListeners() {
@@ -71,7 +74,7 @@ class UserInterface {
     const userInterfaceDiv = document.getElementById("user-interface");
 
     if (accessText) {
-      accessText.textContent = "Standalone Mode";
+      accessText.textContent = "Checking connection...";
     }
     if (noAccessDiv) {
       noAccessDiv.style.display = "none";
@@ -354,8 +357,10 @@ class UserInterface {
 
       if (response.ok) {
         const status = await response.json();
+        console.log("Status received:", status);
         this.updateHatStatus(status);
       } else {
+        console.warn("Status check failed with status:", response.status);
         this.updateHatStatus("offline");
       }
     } catch (error) {
@@ -367,6 +372,8 @@ class UserInterface {
   updateHatStatus(status) {
     const sendBtn = document.getElementById("send-hat-btn");
     const accessText = document.getElementById("access-text");
+
+    console.log("Updating hat status with:", status);
 
     // Check if offline
     if (status === "offline") {
@@ -394,12 +401,16 @@ class UserInterface {
       if (isReady) {
         accessText.textContent = `Hat is ready (${status.formulas_queue} in queue)`;
       } else if (status.command && status.command.Countdown !== undefined) {
-        accessText.textContent = "Hat is in countdown mode";
+        const totalSeconds = status.command.Countdown;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        accessText.textContent = `Hat is in countdown mode (${minutes}:${seconds.toString().padStart(2, '0')} remaining)`;
       } else if (status.command && status.command.Icon) {
-        accessText.textContent = "Hat is showing an icon";
+        accessText.textContent = `Hat is showing an icon (${status.command.Icon})`;
       } else {
         accessText.textContent = "Hat is busy";
       }
+      console.log("Access text updated to:", accessText.textContent);
     }
   }
 
@@ -459,7 +470,12 @@ class UserInterface {
     }
   }
 
-  // Removed periodic status checks - not needed in standalone mode
+  startPeriodicStatusUpdates() {
+    // Poll status every 5 seconds
+    this.checkInterval = setInterval(() => {
+      this.checkBackendConnectivity();
+    }, 5000);
+  }
 
   destroy() {
     if (this.checkInterval) {
