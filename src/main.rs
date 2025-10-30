@@ -54,8 +54,9 @@ async fn main() {
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
     {
-        shared_hat.lock().await.set_state(HatState::Function);
-        // shared_hat.lock().await.start_countdown(100);
+        shared_hat.lock().await.show_icon(IconType::Pumpkin);
+        // shared_hat.lock().await.set_state(HatState::Function);
+        // shared_hat.lock().await.start_countdown(1000);
     }
 
     // Clone the hat for the UDP server

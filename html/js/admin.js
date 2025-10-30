@@ -96,12 +96,6 @@ class AdminInterface {
         document.getElementById('custom-minutes').value = '';
     }
 
-    async resetCountdown() {
-        // Note: Backend doesn't currently support reset command
-        // This would need to be implemented as a new AdminCommand variant
-        this.showErrorMessage('Reset countdown feature not yet implemented in backend');
-    }
-
     async allowFunction() {
         try {
             const secret = sessionStorage.getItem('admin_secret');
@@ -137,14 +131,16 @@ class AdminInterface {
             const timeRemaining = document.getElementById('time-remaining');
             const timerStatus = document.getElementById('timer-status');
             const timerDisplay = document.querySelector('.timer-display');
+            const currentTimerSection = document.querySelector('.current-timer');
 
             // Check if command is Countdown
             if (status.command && status.command.Countdown !== undefined) {
-                // Countdown is active - value is in seconds
+                // Countdown is active - show the section and value is in seconds
                 const totalSeconds = status.command.Countdown;
                 const displayMinutes = Math.floor(totalSeconds / 60);
                 const displaySeconds = Math.floor(totalSeconds % 60);
 
+                currentTimerSection.style.display = 'block';
                 timerStatus.textContent = 'Countdown Active';
                 timerDisplay.classList.add('active');
                 timerDisplay.classList.remove('expired');
@@ -157,18 +153,8 @@ class AdminInterface {
                     timerStatus.textContent = 'Countdown Expired';
                 }
             } else {
-                // No countdown active
-                timeRemaining.textContent = '--:--';
-                timerDisplay.classList.remove('active', 'expired');
-
-                // Show current mode
-                if (status.command === 'AllowFunction') {
-                    timerStatus.textContent = 'Function Mode';
-                } else if (status.command && status.command.Icon) {
-                    timerStatus.textContent = `Icon Mode: ${status.command.Icon}`;
-                } else {
-                    timerStatus.textContent = 'Unknown Mode';
-                }
+                // No countdown active - hide the section
+                currentTimerSection.style.display = 'none';
             }
         } catch (error) {
             console.error('Error updating timer:', error);
@@ -181,11 +167,7 @@ class AdminInterface {
             const status = await response.json();
 
             // Update formulas queue from status
-            document.getElementById('formulas-today').textContent = status.formulas_queue || '0';
-
-            // Other stats not yet implemented
-            document.getElementById('active-connections').textContent = 'N/A';
-            document.getElementById('system-uptime').textContent = 'N/A';
+            document.getElementById('formulas-queue').textContent = status.formulas_queue || '0';
         } catch (error) {
             console.error('Error updating stats:', error);
         }
@@ -213,21 +195,6 @@ class AdminInterface {
             console.error('Error updating status:', error);
             document.getElementById('status-text').textContent = 'System Status: Error';
         }
-    }
-
-    async viewLogs() {
-        // Note: Backend doesn't have a logs endpoint yet
-        this.showErrorMessage('View logs feature not yet implemented in backend');
-    }
-
-    async clearHistory() {
-        // Note: Backend doesn't have a history clear endpoint yet
-        this.showErrorMessage('Clear history feature not yet implemented in backend');
-    }
-
-    async restartSystem() {
-        // Note: Backend doesn't have a restart endpoint yet
-        this.showErrorMessage('Restart system feature not yet implemented in backend');
     }
 
 
@@ -297,24 +264,8 @@ function setCustomCountdown() {
     adminInterface.setCustomCountdown();
 }
 
-function resetCountdown() {
-    adminInterface.resetCountdown();
-}
-
 function allowFunction() {
     adminInterface.allowFunction();
-}
-
-function viewLogs() {
-    adminInterface.viewLogs();
-}
-
-function clearHistory() {
-    adminInterface.clearHistory();
-}
-
-function restartSystem() {
-    adminInterface.restartSystem();
 }
 
 // Initialize when DOM is loaded

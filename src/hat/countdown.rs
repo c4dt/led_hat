@@ -25,24 +25,30 @@ impl Countdown {
                 .brightness(((now_ms % 2000) as f32 / 1000. * PI).sin() * 0.5 + 0.5);
             self.leds.fill(&red);
         } else {
-            self.leds.fill(&LED::from_rgb(0, 0x60, 0));
             let left = (self.end_ms - now_ms) / 1000;
-            let (left_s, left_m) = (left % 60, left / 60);
-            let print = format!("{left_m:02}:{left_s:02}");
-            let on = LED::from_rgb(0x80, 0x80, 0x80);
-            for y in 0..8 {
-                for c in 0..5 {
-                    let char = DIGITS[(print.as_bytes()[c] - b'0') as usize][7 - y];
-                    for b in 0..8 {
-                        if (char >> b) & 1 == 1 {
-                            self.leds.set_u(c * 8 + b, y, on.clone());
-                        }
-                    }
-                }
-            }
+            self.leds.fill(&LED::from_rgb(0, 0x60, 0));
+            let left_m = format!("{:02}", left / 60);
+            let left_s = format!("{:02}", left % 60);
+            self.set_char(0, left_m.as_bytes()[0]);
+            self.set_char(DIGITS_WIDTH, left_m.as_bytes()[1]);
+            self.set_char(2 * DIGITS_WIDTH - 2, b':');
+            self.set_char(2 * DIGITS_WIDTH + 4, left_s.as_bytes()[0]);
+            self.set_char(3 * DIGITS_WIDTH + 4, left_s.as_bytes()[1]);
         }
         self.leds.brightness(0.5);
         self.leds.leds.clone()
+    }
+
+    fn set_char(&mut self, x: usize, char: u8) {
+        let on = LED::from_rgb(0xa0, 0xa0, 0xa0);
+        for y in 0..8 {
+            let byte = DIGITS[(char - b'0') as usize][7 - y];
+            for b in 0..DIGITS_WIDTH {
+                if (byte >> b) & 1 == 1 {
+                    self.leds.set_u(x + b, y, on.clone());
+                }
+            }
+        }
     }
 
     pub fn get_minutes(&self, now: u128) -> u128 {
@@ -55,6 +61,7 @@ impl Countdown {
 }
 
 // Copied from https://github.com/dhepper/font8x8/blob/master/font8x8_basic.h
+const DIGITS_WIDTH: usize = 7;
 const DIGITS: [[u8; 8]; 11] = [
     [0x3E, 0x63, 0x73, 0x7B, 0x6F, 0x67, 0x3E, 0x00], // U+0030 (0)
     [0x0C, 0x0E, 0x0C, 0x0C, 0x0C, 0x0C, 0x3F, 0x00], // U+0031 (1)
@@ -68,3 +75,18 @@ const DIGITS: [[u8; 8]; 11] = [
     [0x1E, 0x33, 0x33, 0x3E, 0x30, 0x18, 0x0E, 0x00], // U+0039 (9)
     [0x00, 0x0C, 0x0C, 0x00, 0x00, 0x0C, 0x0C, 0x00], // U+003A (:)
 ];
+
+// const DIGITS_WIDTH: usize = 5;
+// const DIGITS: [[u8; 8]; 11] = [
+//     [0x00, 0x1E, 0x33, 0x33, 0x33, 0x33, 0x33, 0x1E],
+//     [0x00, 0x18, 0x1C, 0x1A, 0x18, 0x18, 0x18, 0x18],
+//     [0x00, 0x1F, 0x33, 0x38, 0x1C, 0x0E, 0x07, 0x3F],
+//     [0x00, 0x3F, 0x18, 0x0C, 0x1E, 0x30, 0x33, 0x1F],
+//     [0x00, 0x18, 0x1C, 0x1A, 0x19, 0x7F, 0x18, 0x18],
+//     [0x00, 0x3F, 0x03, 0x1F, 0x30, 0x30, 0x33, 0x1F],
+//     [0x00, 0x1E, 0x03, 0x1F, 0x33, 0x33, 0x33, 0x1E],
+//     [0x00, 0x3F, 0x30, 0x38, 0x1C, 0x0E, 0x06, 0x06],
+//     [0x00, 0x1E, 0x33, 0x33, 0x1E, 0x33, 0x33, 0x1E],
+//     [0x00, 0x1E, 0x33, 0x33, 0x33, 0x3E, 0x30, 0x1E],
+//     [0x00, 0x00, 0x0C, 0x0C, 0x00, 0x00, 0x0C, 0x0C],
+// ];
