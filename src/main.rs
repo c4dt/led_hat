@@ -11,7 +11,11 @@ use tokio::{net::UdpSocket, sync::Mutex};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::hat::{function::FormulaStrings, icon::IconType, switch::HatState};
+use crate::hat::{
+    function::FormulaStrings,
+    icon::IconType,
+    switch::{HatState, HatStatus},
+};
 
 mod hat;
 
@@ -19,6 +23,7 @@ mod hat;
 pub enum AdminCommand {
     Countdown(u128),
     Icon(IconType),
+    AllowFunction,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -111,9 +116,9 @@ async fn get_leds(State(state): State<AppState>) -> String {
     hat.get_leds_string()
 }
 
-async fn get_status(State(state): State<AppState>) -> String {
+async fn get_status(State(state): State<AppState>) -> Json<HatStatus> {
     let hat = state.hat.lock().await;
-    hat.get_status()
+    hat.get_status().into()
 }
 
 async fn set_formulas(
@@ -144,6 +149,7 @@ async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>)
     match payload.command {
         AdminCommand::Countdown(seconds) => hat.start_countdown(seconds),
         AdminCommand::Icon(icon) => hat.show_icon(icon),
+        AdminCommand::AllowFunction => hat.set_state(HatState::Function),
     }
 
     StatusCode::OK

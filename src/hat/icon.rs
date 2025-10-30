@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::hat::leds::{LEDCriss, LED};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum IconType {
     Empty,
     Test,
@@ -23,7 +23,7 @@ impl Icon {
         }
     }
 
-    pub fn set_icon(&mut self, icon: IconType){
+    pub fn set_icon(&mut self, icon: IconType) {
         self.icon = icon;
     }
 
@@ -77,6 +77,10 @@ impl Icon {
             }
         }
         self.leds.leds.clone()
+    }
+
+    pub fn get_icon(&self) -> IconType {
+        self.icon.clone()
     }
 
     fn draw_icon(&mut self, pos_x: f32, mut pos_y: f32, pattern: &str, colors: Vec<LED>) {

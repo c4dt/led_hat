@@ -31,28 +31,13 @@ class AdminInterface {
             return;
         }
 
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/api/admin/auth`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ secret })
-            });
-
-            if (response.ok) {
-                this.authenticated = true;
-                sessionStorage.setItem('admin_authenticated', 'true');
-                sessionStorage.setItem('admin_secret', secret);
-                this.showAdminPanel();
-                errorDiv.style.display = 'none';
-            } else {
-                this.showError('Invalid admin secret');
-            }
-        } catch (error) {
-            console.error('Authentication error:', error);
-            this.showError('Authentication failed. Please try again.');
-        }
+        // Store the secret and show the admin panel
+        // Authentication will be verified with actual commands
+        sessionStorage.setItem('admin_secret', secret);
+        this.authenticated = true;
+        sessionStorage.setItem('admin_authenticated', 'true');
+        this.showAdminPanel();
+        errorDiv.style.display = 'none';
     }
 
     showError(message) {
@@ -70,16 +55,25 @@ class AdminInterface {
 
     async setCountdown(minutes) {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/countdown', {
+            const secret = sessionStorage.getItem('admin_secret');
+            const seconds = minutes * 60; // Convert minutes to seconds
+
+            const response = await fetch(`${this.apiBaseUrl}/api/admin`, {
                 method: 'POST',
-                body: JSON.stringify({ minutes })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    secret: secret,
+                    command: { Countdown: seconds }
+                })
             });
 
             if (response.ok) {
                 this.updateTimer();
                 this.showSuccessMessage(`${minutes} minute countdown started`);
             } else {
-                this.showErrorMessage('Failed to set countdown');
+                this.showErrorMessage('Failed to set countdown - check admin secret');
             }
         } catch (error) {
             console.error('Error setting countdown:', error);
@@ -101,45 +95,41 @@ class AdminInterface {
     }
 
     async resetCountdown() {
-        try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/countdown/reset', {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                this.updateTimer();
-                this.showSuccessMessage('Countdown reset');
-            } else {
-                this.showErrorMessage('Failed to reset countdown');
-            }
-        } catch (error) {
-            console.error('Error resetting countdown:', error);
-            this.showErrorMessage('Failed to reset countdown');
-        }
+        // Note: Backend doesn't currently support reset command
+        // This would need to be implemented as a new AdminCommand variant
+        this.showErrorMessage('Reset countdown feature not yet implemented in backend');
     }
 
-    async enableUserAccess() {
+    async allowFunction() {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/access', {
+            const secret = sessionStorage.getItem('admin_secret');
+
+            const response = await fetch(`${this.apiBaseUrl}/api/admin`, {
                 method: 'POST',
-                body: JSON.stringify({ enabled: true })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    secret: secret,
+                    command: 'AllowFunction'
+                })
             });
 
             if (response.ok) {
-                this.updateTimer();
-                this.showSuccessMessage('User access enabled');
+                this.updateStatus();
+                this.showSuccessMessage('Function mode enabled');
             } else {
-                this.showErrorMessage('Failed to enable user access');
+                this.showErrorMessage('Failed to enable function mode - check admin secret');
             }
         } catch (error) {
-            console.error('Error enabling access:', error);
-            this.showErrorMessage('Failed to enable user access');
+            console.error('Error enabling function mode:', error);
+            this.showErrorMessage('Failed to enable function mode');
         }
     }
 
     async updateTimer() {
         try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/status');
+            const response = await fetch(`${this.apiBaseUrl}/api/get_status`);
             const data = await response.json();
 
             const timeRemaining = document.getElementById('time-remaining');
@@ -163,7 +153,7 @@ class AdminInterface {
                 }
             } else {
                 timeRemaining.textContent = '--:--';
-                timerStatus.textContent = data.user_access_enabled ? 'User Access Enabled' : 'No Timer Active';
+                timerStatus.textContent = 'No Timer Active';
                 timerDisplay.classList.remove('active', 'expired');
             }
         } catch (error) {
@@ -172,25 +162,20 @@ class AdminInterface {
     }
 
     async updateStats() {
-        try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/stats');
-            const data = await response.json();
-
-            document.getElementById('active-connections').textContent = data.active_connections || '0';
-            document.getElementById('formulas-today').textContent = data.formulas_today || '0';
-            document.getElementById('system-uptime').textContent = this.formatUptime(data.uptime_seconds || 0);
-        } catch (error) {
-            console.error('Error updating stats:', error);
-        }
+        // Note: Backend doesn't have a stats endpoint yet
+        // Using placeholder values
+        document.getElementById('active-connections').textContent = 'N/A';
+        document.getElementById('formulas-today').textContent = 'N/A';
+        document.getElementById('system-uptime').textContent = 'N/A';
     }
 
     async updateStatus() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/api/status`);
+            const response = await fetch(`${this.apiBaseUrl}/api/get_status`);
             const data = await response.json();
 
             const statusText = document.getElementById('status-text');
-            statusText.textContent = `System Status: ${data.status || 'Unknown'}`;
+            statusText.textContent = `System Status: ${data.state || 'Unknown'}`;
         } catch (error) {
             console.error('Error updating status:', error);
             document.getElementById('status-text').textContent = 'System Status: Error';
@@ -198,91 +183,20 @@ class AdminInterface {
     }
 
     async viewLogs() {
-        try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/logs');
-            const logs = await response.text();
-
-            // Create a modal or new window to display logs
-            const logWindow = window.open('', 'logs', 'width=800,height=600,scrollbars=yes');
-            logWindow.document.write(`
-                <html>
-                <head>
-                    <title>System Logs</title>
-                    <style>
-                        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
-                        pre { white-space: pre-wrap; word-wrap: break-word; }
-                    </style>
-                </head>
-                <body>
-                    <h1>System Logs</h1>
-                    <pre>${logs}</pre>
-                </body>
-                </html>
-            `);
-        } catch (error) {
-            console.error('Error viewing logs:', error);
-            this.showErrorMessage('Failed to load logs');
-        }
+        // Note: Backend doesn't have a logs endpoint yet
+        this.showErrorMessage('View logs feature not yet implemented in backend');
     }
 
     async clearHistory() {
-        if (!confirm('Are you sure you want to clear the formula history? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/history/clear', {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                this.showSuccessMessage('Formula history cleared');
-            } else {
-                this.showErrorMessage('Failed to clear history');
-            }
-        } catch (error) {
-            console.error('Error clearing history:', error);
-            this.showErrorMessage('Failed to clear history');
-        }
+        // Note: Backend doesn't have a history clear endpoint yet
+        this.showErrorMessage('Clear history feature not yet implemented in backend');
     }
 
     async restartSystem() {
-        if (!confirm('Are you sure you want to restart the system? This will disconnect all users.')) {
-            return;
-        }
-
-        try {
-            const response = await this.makeAuthenticatedRequest('/api/admin/restart', {
-                method: 'POST'
-            });
-
-            if (response.ok) {
-                this.showSuccessMessage('System restart initiated');
-                // Redirect to home page after a delay
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 3000);
-            } else {
-                this.showErrorMessage('Failed to restart system');
-            }
-        } catch (error) {
-            console.error('Error restarting system:', error);
-            this.showErrorMessage('Failed to restart system');
-        }
+        // Note: Backend doesn't have a restart endpoint yet
+        this.showErrorMessage('Restart system feature not yet implemented in backend');
     }
 
-    async makeAuthenticatedRequest(url, options = {}) {
-        const secret = sessionStorage.getItem('admin_secret');
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Admin-Secret': secret,
-                ...options.headers
-            }
-        };
-
-        return fetch(`${this.apiBaseUrl}${url}`, { ...defaultOptions, ...options });
-    }
 
     formatUptime(seconds) {
         const hours = Math.floor(seconds / 3600);
@@ -341,8 +255,8 @@ function resetCountdown() {
     adminInterface.resetCountdown();
 }
 
-function enableUserAccess() {
-    adminInterface.enableUserAccess();
+function allowFunction() {
+    adminInterface.allowFunction();
 }
 
 function viewLogs() {

@@ -1,9 +1,17 @@
-use crate::hat::{
+use serde::{Deserialize, Serialize};
+
+use crate::{hat::{
     countdown::Countdown,
     function::{FormulaStrings, Function},
     icon::{Icon, IconType},
     leds::LED,
-};
+}, AdminCommand};
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct HatStatus {
+    command: AdminCommand,
+    formulas_queue: usize,
+}
 
 pub struct Switch {
     function: Function,
@@ -43,13 +51,15 @@ impl Switch {
             .collect()
     }
 
-    pub fn get_status(&self) -> String {
-        match self.state {
-            HatState::Function => "Function",
-            HatState::Icon => "Icon",
-            HatState::Countdown => "Countdown",
+    pub fn get_status(&self) -> HatStatus {
+        HatStatus {
+            command: match self.state {
+                HatState::Function => AdminCommand::AllowFunction,
+                HatState::Icon => AdminCommand::Icon(self.icons.get_icon()),
+                HatState::Countdown => todo!(),
+            },
+            formulas_queue: self.function.queue_len(),
         }
-        .into()
     }
 
     pub fn add_formula(&mut self, fs: FormulaStrings) {

@@ -99,6 +99,10 @@ impl Function {
         }
         leds
     }
+
+    pub fn queue_len(&self) -> usize {
+        self.queue.len()
+    }
 }
 
 // Stores one formula
