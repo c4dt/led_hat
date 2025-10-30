@@ -1,7 +1,7 @@
 use crate::hat::{
     countdown::Countdown,
     function::{FormulaStrings, Function},
-    icon::Icon,
+    icon::{Icon, IconType},
     leds::LED,
 };
 
@@ -22,8 +22,8 @@ impl Switch {
     pub fn new(leds: usize, circum: usize) -> Self {
         Switch {
             icons: Icon::new(leds, circum),
-            function: Function::new(leds, circum, 1, 1),
-            countdown: Countdown::new(),
+            function: Function::new(leds, circum, 1, 10),
+            countdown: Countdown::new(leds, circum),
             state: HatState::Function,
         }
     }
@@ -60,6 +60,17 @@ impl Switch {
         self.state = state;
     }
 
+    pub fn start_countdown(&mut self, seconds: u128) {
+        self.countdown
+            .set_countdown(Self::get_time() + seconds * 1000);
+        self.state = HatState::Countdown;
+    }
+
+    pub fn show_icon(&mut self, icon: IconType) {
+        self.icons.set_icon(icon);
+        self.state = HatState::Icon;
+    }
+
     pub fn get_time() -> u128 {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -71,7 +82,10 @@ impl Switch {
         let time = Self::get_time();
 
         match self.state {
-            HatState::Function => self.function.get_leds(time),
+            HatState::Function => {
+                self.function.check_formulas(time);
+                self.function.get_leds(time)
+            }
             HatState::Icon => self.icons.get_leds(time),
             HatState::Countdown => self.countdown.get_leds(time),
         }

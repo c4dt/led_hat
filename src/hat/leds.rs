@@ -78,6 +78,22 @@ impl LEDCriss {
         }
     }
 
+    pub fn set_u(&mut self, x: usize, y: usize, led: &LED) {
+        self.set(x as f32, y as f32, led);
+    }
+
+    pub fn fill(&mut self, led: &LED) {
+        for i in 0..self.leds.len(){
+            self.leds[i] = led.clone();
+        }
+    }
+
+    pub fn brightness(&mut self, bright: f32){
+        for led in &mut self.leds{
+            *led = led.brightness(bright);
+        }
+    }
+
     fn calc_square(mut dx: f32, mut dy: f32) -> f32 {
         (dx, dy) = (dx.abs(), dy.abs());
         if dx >= 2. || dy >= 2. {
@@ -89,7 +105,7 @@ impl LEDCriss {
         (((2. - dx).powi(2) - dy.powi(2)) / 4.).powf(0.8)
     }
 
-    fn calc_circle(dx: f32, dy: f32) -> f32 {
+    fn _calc_circle(dx: f32, dy: f32) -> f32 {
         // Calculate the brightness proportional to the area the circle
         // of this point overlaps with the target circle.
         let d = (dx.powi(2) + dy.powi(2)).sqrt();
@@ -111,7 +127,7 @@ pub struct LED {
 }
 
 impl LED {
-    pub fn white() -> Self {
+    pub fn _white() -> Self {
         Self::from_hex("ffffff")
     }
 
@@ -149,7 +165,7 @@ impl LED {
         self.blue
     }
 
-    pub fn from_hue(hue: u8) -> LED {
+    pub fn _from_hue(hue: u8) -> LED {
         let bright = hue % 64;
         let hue = hue / 64;
         let (one, two) = (255 - bright * 2, 128 + bright * 2);
@@ -169,7 +185,7 @@ impl LED {
                 green: 64,
                 blue: one,
             },
-            _ => LED::white(),
+            _ => LED::_white(),
         }
     }
 
@@ -193,7 +209,7 @@ impl LED {
         l
     }
 
-    pub fn is_black(&self) -> bool {
+    pub fn _is_black(&self) -> bool {
         self.red == 0 && self.green == 0 && self.blue == 0
     }
 
@@ -205,7 +221,7 @@ impl LED {
         }
     }
 
-    pub fn mean(&self, others: Vec<Self>) -> Self {
+    pub fn _mean(&self, others: Vec<Self>) -> Self {
         let (mut red, mut green, mut blue) =
             (self.red as usize, self.green as usize, self.blue as usize);
         let s = others.len() + 1;
@@ -225,7 +241,7 @@ impl LED {
         format!("{:02x}{:02x}{:02x}", self.red, self.green, self.blue)
     }
 
-    pub fn xor(&mut self, other: LED) {
+    pub fn _xor(&mut self, other: LED) {
         self.red ^= other.red;
         self.green ^= other.green;
         self.blue ^= other.blue;
@@ -268,7 +284,7 @@ mod test {
     // 00 . 01 . 02 . 03
     fn test_led_integer() {
         let mut leds = LEDCriss::new(15, 4);
-        let w = &LED::white();
+        let w = &LED::_white();
         leds.set(1., 1., w);
         check_leds(&leds, "0000 f00 0000 000 0");
         leds.clear();
@@ -301,7 +317,7 @@ mod test {
     // 00 . 01 . 02 . 03
     fn test_led_float() {
         let mut leds = LEDCriss::new(15, 4);
-        let w = &LED::white();
+        let w = &LED::_white();
         leds.set(2.1, 2.1, w);
         check_leds(&leds, "0000 000 0e00 010 0");
 

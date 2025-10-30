@@ -11,14 +11,14 @@ use tokio::{net::UdpSocket, sync::Mutex};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::hat::{function::FormulaStrings, switch::HatState};
+use crate::hat::{function::FormulaStrings, icon::IconType, switch::HatState};
 
 mod hat;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum AdminCommand {
     Countdown(u128),
-    Icon(String),
+    Icon(IconType),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -48,6 +48,10 @@ async fn main() {
         .init();
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
+    {
+        shared_hat.lock().await.set_state(HatState::Function);
+        // shared_hat.lock().await.start_countdown(100);
+    }
 
     // Clone the hat for the UDP server
     let udp_hat = shared_hat.clone();
@@ -138,8 +142,8 @@ async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>)
     let mut hat = state.hat.lock().await;
 
     match payload.command {
-        AdminCommand::Countdown(_) => hat.set_state(HatState::Countdown),
-        AdminCommand::Icon(_) => hat.set_state(HatState::Icon),
+        AdminCommand::Countdown(seconds) => hat.start_countdown(seconds),
+        AdminCommand::Icon(icon) => hat.show_icon(icon),
     }
 
     StatusCode::OK

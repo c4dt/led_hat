@@ -1,5 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::hat::leds::{LEDCriss, LED};
 
+#[derive(Debug, Deserialize, Serialize)]
 pub enum IconType {
     Empty,
     Test,
@@ -18,6 +21,10 @@ impl Icon {
             leds: LEDCriss::new(leds, circum),
             icon: IconType::Fish,
         }
+    }
+
+    pub fn set_icon(&mut self, icon: IconType){
+        self.icon = icon;
     }
 
     pub fn get_leds(&mut self, time: u128) -> Vec<super::LED> {

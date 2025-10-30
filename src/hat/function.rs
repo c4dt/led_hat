@@ -14,11 +14,11 @@ pub struct Function {
     queue: VecDeque<Formula>,
     // The current formula, or None
     current: Option<Formula>,
-    // Minimum time a formula is shown, in seconds
+    // Minimum time a formula is shown, in ms
     time_min: u128,
-    // Total time budget divided by the length of the queue, in seconds
+    // Total time budget divided by the length of the queue, in ms
     time_total: u128,
-    // Start of current formula, in seconds
+    // Start of current formula, in ms
     time_start: u128,
 }
 
@@ -49,27 +49,20 @@ impl Function {
             .push_back(Formula::new(fs.red, fs.green, fs.blue));
     }
 
-    pub fn clear_queue(&mut self) {
+    pub fn _clear_queue(&mut self) {
         self.queue.clear();
         self.current = None;
     }
 
-    pub fn get_leds(&mut self, time_ms: u128) -> Vec<super::LED> {
-        // Calculate the current state of the LEDs.
-        // This needs to do the following:
-        // 1. decide if it's time to go to the next formula, based on the
+    pub fn check_formulas(&mut self, time_ms: u128) {
+        // Decide if it's time to go to the next formula, based on the
         // time_min, time_total, and time_start
-        // 2. then call self.eval() for all LEDs in the hat, but making
-        // sure that
-        //   - only half of the LEDs are calculated, as the wall
-        //   is made up of interleaved LEDs
-        //   - the x goes from -1 to 1, as does the y
-        // 3. return the LEDs
 
         // Check if we need to advance to the next formula
-        let time_since_start = time_ms - self.time_start;
-        let should_advance = if self.current.is_some() {
-            time_since_start >= self.time_min * 1000 && !self.queue.is_empty()
+        let should_advance = if self.current.is_some() && !self.queue.is_empty() {
+            let time_since_start = time_ms - self.time_start;
+            time_since_start >= self.time_min
+                && (time_since_start >= self.time_total / self.queue.len() as u128)
         } else {
             !self.queue.is_empty()
         };
@@ -81,7 +74,9 @@ impl Function {
                 self.time_start = time_ms;
             }
         }
+    }
 
+    pub fn get_leds(&self, time_ms: u128) -> Vec<super::LED> {
         // Calculate LEDs
         let mut leds = vec![];
         if let Some(formula) = &self.current {
@@ -260,13 +255,6 @@ impl Formula {
     fn is_number(token: &str) -> bool {
         token.parse::<f32>().is_ok()
     }
-
-    fn clamp_to_u8_range(&self, value: f32) -> u8 {
-        if value.is_nan() || !value.is_finite() {
-            return 0;
-        }
-        value.clamp(0.0, 255.0) as u8
-    }
 }
 
 #[cfg(test)]
@@ -286,7 +274,7 @@ mod test {
 
     #[test]
     fn test_function() {
-        let mut func = Function::new(10, 5, 10000, 10000);
+        let mut func = Function::new(10, 5, 10, 10);
         func.add_formula(FormulaStrings {
             red: "x cos".into(),
             green: "y cos".into(),
