@@ -12,6 +12,12 @@ body {
     padding: 20px;
 }
 
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+}
+
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -87,8 +93,8 @@ header h1 {
 }
 
 .led-circle {
-    width: 400px;
-    max-width: 100%;
+    width: min(400px, 90vw);
+    height: min(400px, 90vw);
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.3);
     margin: 0 auto 30px;
@@ -296,11 +302,20 @@ button {
 #submit-btn {
     background: linear-gradient(45deg, #4caf50, #45a049);
     color: white;
-    flex: 1;
 }
 
 #submit-btn:hover {
     background: linear-gradient(45deg, #45a049, #3d8b40);
+    transform: translateY(-2px);
+}
+
+#send-hat-btn {
+    background: linear-gradient(45deg, #2196f3, #1976d2);
+    color: white;
+}
+
+#send-hat-btn:hover {
+    background: linear-gradient(45deg, #1976d2, #1565c0);
     transform: translateY(-2px);
 }
 
@@ -504,15 +519,22 @@ button {
 
 @media (max-width: 768px) {
     .container {
-        padding: 20px;
+        padding: 15px;
     }
 
     header h1 {
-        font-size: 2em;
+        font-size: 1.75em;
     }
 
     #countdown-time {
-        font-size: 3em;
+        font-size: 2.5em;
+    }
+
+    .explanation-section,
+    .formula-section,
+    .simulation-section,
+    .history-section {
+        padding: 15px;
     }
 
     .help-grid {
@@ -521,19 +543,44 @@ button {
 
     .control-buttons {
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .control-buttons button {
+        width: 100%;
+        margin: 0;
     }
 
     .dropdown-container {
         width: 100%;
+        flex-direction: column;
     }
 
     .dropdown-container select {
-        flex: 1;
+        width: 100%;
         min-width: auto;
     }
 
+    .dropdown-container button {
+        width: 100%;
+    }
+
+    .led-circle {
+        width: min(300px, 85vw);
+        height: min(300px, 85vw);
+    }
+
     .led {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
+    }
+
+    .simulation-controls button {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .control-group {
+        margin-bottom: 20px;
     }
 }

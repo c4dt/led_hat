@@ -387,8 +387,8 @@ class UserInterface {
       return;
     }
 
-    // Check if in Function mode (ready to receive formulas)
-    const isReady = status.command === "AllowFunction";
+    // Check if allowed to send formulas using the allow_function field
+    const isReady = status.allow_function === true;
 
     // Update button state
     if (sendBtn) {

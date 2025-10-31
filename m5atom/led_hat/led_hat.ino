@@ -14,8 +14,8 @@
 #include "wifi.h"
 
 // #define BASE_NAME "led-hat.c4dt.org"
-// #define BASE_NAME "led-hat.ineiti.ch"
-#define BASE_NAME "192.168.178.143"
+#define BASE_NAME "led-hat.ineiti.ch"
+// #define BASE_NAME "192.168.178.143"
 // #define BASE_NAME "192.168.0.161"
 #define BASE_URL "https://" BASE_NAME
 // #define BASE_URL "http://" BASE_NAME ":8080"

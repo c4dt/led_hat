@@ -14,6 +14,7 @@ use crate::{
 pub struct HatStatus {
     command: AdminCommand,
     formulas_queue: usize,
+    allow_function: bool,
 }
 
 pub struct Switch {
@@ -21,8 +22,10 @@ pub struct Switch {
     icons: Icon,
     countdown: Countdown,
     state: HatState,
+    allow_function: bool,
 }
 
+#[derive(PartialEq)]
 pub enum HatState {
     Function,
     Icon,
@@ -36,6 +39,7 @@ impl Switch {
             function: Function::new(leds, circum, 1000, 10000),
             countdown: Countdown::new(leds, circum),
             state: HatState::Function,
+            allow_function: true,
         }
     }
 
@@ -64,26 +68,35 @@ impl Switch {
                 }
             },
             formulas_queue: self.function.queue_len(),
+            allow_function: self.allow_function,
         }
     }
 
     pub fn add_formula(&mut self, fs: FormulaStrings) {
         self.function.add_formula(fs);
+        if self.allow_function && self.state != HatState::Function {
+            self.set_state(HatState::Function);
+        }
     }
 
     pub fn set_state(&mut self, state: HatState) {
+        self.allow_function = state == HatState::Function;
         self.state = state;
+    }
+
+    pub fn allow_function(&mut self) {
+        self.allow_function = true;
     }
 
     pub fn start_countdown(&mut self, seconds: u128) {
         self.countdown
             .set_countdown(Self::get_time() + seconds * 1000);
-        self.state = HatState::Countdown;
+        self.set_state(HatState::Countdown);
     }
 
     pub fn show_icon(&mut self, icon: IconType) {
         self.icons.set_icon(icon);
-        self.state = HatState::Icon;
+        self.set_state(HatState::Icon);
     }
 
     pub fn get_time() -> u128 {

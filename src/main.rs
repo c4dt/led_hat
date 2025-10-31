@@ -11,11 +11,7 @@ use tokio::{net::UdpSocket, sync::Mutex};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::hat::{
-    function::FormulaStrings,
-    icon::IconType,
-    switch::{HatState, HatStatus},
-};
+use crate::hat::{function::FormulaStrings, icon::IconType, switch::HatStatus};
 
 mod hat;
 
@@ -155,7 +151,7 @@ async fn admin(State(state): State<AppState>, Json(payload): Json<AdminRequest>)
     match payload.command {
         AdminCommand::Countdown(seconds) => hat.start_countdown(seconds),
         AdminCommand::Icon(icon) => hat.show_icon(icon),
-        AdminCommand::AllowFunction => hat.set_state(HatState::Function),
+        AdminCommand::AllowFunction => hat.allow_function(),
     }
 
     StatusCode::OK
