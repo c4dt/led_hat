@@ -12,6 +12,8 @@ An admin user can set the icons, and should also be able to create
 countdown timers.
 All of this has been created for the [Swiss Crypto Day - Halloween Edition](https://scd2025.c4dt.org).
 
+See the [slides for the Blackalps '25 rump session](slides_blackalps_2025_rump.pdf)
+
 # User Interface
 
 For the user interface, there are two sets:
