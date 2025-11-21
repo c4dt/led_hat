@@ -407,6 +407,7 @@ button {
 @media (min-width: 1200px) {
     .led-circle {
         width: 50vh;
+        height: 50vh;
     }
 }
 
