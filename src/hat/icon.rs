@@ -108,6 +108,8 @@ impl Icon {
                         LED::from_hex("604030"),
                         LED::from_hex("605030"),
                         LED::from_hex("606030"),
+                        LED::from_hex("506030"),
+                        LED::from_hex("406030"),
                     ],
                 );
             }
