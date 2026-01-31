@@ -128,7 +128,7 @@ void show_LEDs(uint8_t *rgb) {
   for (int i = 0; i < NUMPIXELS; i++) {
     // pixels.setPixelColor(i,
     //                      pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2]));
-    pixels.setPixelColor(i,
+    pixels.setPixelColor(NUMPIXELS - i - 1,
                          pixels.gamma32(pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2])));
   }
   pixels.show();
