@@ -51,6 +51,10 @@ impl Switch {
             .join("")
     }
 
+    pub fn set_co2(&mut self, co2: u16) {
+        self.icons.set_co2(co2);
+    }
+
     pub fn get_leds_binary(&mut self) -> Vec<u8> {
         self.get_leds()
             .iter()

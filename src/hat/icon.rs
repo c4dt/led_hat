@@ -12,11 +12,13 @@ pub enum IconType {
     BlackAlps,
     TiTi,
     Fosdem,
+    Co2,
 }
 
 pub struct Icon {
     leds: LEDCriss,
     icon: IconType,
+    co2: u16,
 }
 
 impl Icon {
@@ -24,11 +26,16 @@ impl Icon {
         Self {
             leds: LEDCriss::new(leds, circum),
             icon: IconType::Fish,
+            co2: 0,
         }
     }
 
     pub fn set_icon(&mut self, icon: IconType) {
         self.icon = icon;
+    }
+
+    pub fn set_co2(&mut self, co2: u16) {
+        self.co2 = co2;
     }
 
     pub fn get_leds(&mut self, time: u128) -> Vec<super::LED> {
@@ -113,6 +120,20 @@ impl Icon {
                     ],
                 );
             }
+            IconType::Co2 => {
+                let x = ((time / 5000) % 5) as usize * self.leds.range.0 / 5;
+                self.draw_icon(
+                    x as f32,
+                    0.,
+                    CO2,
+                    vec![LED::black(), LED::from_hex("505050")],
+                );
+                self.leds.set_string(
+                    x + 24,
+                    // ((37000 - (time % 37000)) as usize * self.leds.range.0) / 37000,
+                    &format!("{}", self.co2),
+                );
+            }
         }
         self.leds.leds.clone()
     }
@@ -151,6 +172,17 @@ mod test {
     #[test]
     fn test_draw_led() {}
 }
+
+const CO2: &str = r#"
+000000000000000000000
+011100001110000111100
+110000011011000000110
+110000110001100000110
+110000110001100001100
+110000110001100011000
+110000011011000110000
+011110001110000111110
+"#;
 
 const BLACKALPS: &str = r#"
 0000000000000011000000000000000000000000

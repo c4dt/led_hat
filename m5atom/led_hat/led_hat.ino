@@ -2,23 +2,25 @@
  * Connecting through WiFi to the display, and showing it.
  */
 
-#include <M5Atom.h>
 #include <Arduino.h>
+#include <DFRobot_SCD4X.h>
+#include <HTTPClient.h>
+#include <M5Atom.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <WiFiUDP.h>
-#include <HTTPClient.h>
 
 // This needs to define WIFI_AP and WIFI_PW.
 // Don't check into github...
 #include "wifi.h"
 
 // #define BASE_NAME "led-hat.c4dt.org"
-#define BASE_NAME "led-hat.ineiti.ch"
+// #define BASE_NAME "led-hat.ineiti.ch"
 // #define BASE_NAME "192.168.178.143"
+#define BASE_NAME "10.47.158.86"
 // #define BASE_NAME "192.168.0.161"
-#define BASE_URL "https://" BASE_NAME
-// #define BASE_URL "http://" BASE_NAME ":8080"
+// #define BASE_URL "https://" BASE_NAME
+#define BASE_URL "http://" BASE_NAME ":8080"
 #define BASE_UDP_PORT 8081
 
 #define REQUEST_FPS 50
@@ -27,11 +29,14 @@
 #define PIN_STRIP 26
 #define PIN_LED 27
 #define NUMPIXELS 300
+#define BRIGHTNESS 32
 
 // Doesn't work because of __enable_irq()!
 // #include <PololuLedStrip.h>
 // Doesn't work because of RMT_MEM_NUM_BLOCKS_1
 // #include "Freenove_WS2812_Lib_for_ESP32.h"
+
+DFRobot_SCD4X SCD4X(&Wire, /*i2cAddr = */ SCD4X_I2C_ADDR);
 
 #include <Adafruit_NeoPixel.h>
 
@@ -57,48 +62,63 @@ unsigned long last = 0;
 
 HTTPClient http;
 
+void setup_co2();
+void check_co2();
+uint16_t co2;
+
 void setup() {
   M5.begin(true, false, false);
+
+  led.begin();
+  led.setPixelColor(0, pixels.Color(32, 0, 0));
+  led.show();
 
   wifiMulti.addAP(WIFI_AP, WIFI_PW);
   Serial.printf("\nConnecting to %s / %s...\n", WIFI_AP, WIFI_PW);
 
   delay(50);
 
+  led.setPixelColor(0, pixels.Color(32, 32, 0));
+
+  setup_co2();
+
+  led.setPixelColor(0, pixels.Color(0, 32, 32));
+
   pixels.begin();
-  pixels.setBrightness(128);
+  pixels.setBrightness(BRIGHTNESS);
   pixels.clear();
 
-  led.begin();
-  led.setPixelColor(0, pixels.Color(32, 0, 0));
-  led.show();
+  led.setPixelColor(0, pixels.Color(0, 32, 0));
 }
 
 void loop() {
+  check_co2();
   fetch_button();
   switch (state) {
-    case STATE_WIFI:
-      state_wifi();
-      return;
-      break;
-    case STATE_UDP_READ:
-      state_udp_read();
-      break;
-    case STATE_GET_CONNECT:
-      state_get_connect();
-      return;
-      break;
-    case STATE_GET_REQUEST:
-      state_get_request();
-      break;
+  case STATE_WIFI:
+    state_wifi();
+    return;
+    break;
+  case STATE_UDP_READ:
+    state_udp_read();
+    break;
+  case STATE_GET_CONNECT:
+    state_get_connect();
+    return;
+    break;
+  case STATE_GET_REQUEST:
+    state_get_request();
+    break;
   }
 
   unsigned long now = millis();
-  if (now <= REQUEST_INTERVAL + last){
-    // Serial.printf("Request duration: %ld..%ld = %ld\n", last, now, now - last);
+  if (now <= REQUEST_INTERVAL + last) {
+    // Serial.printf("Request duration: %ld..%ld = %ld\n", last, now, now -
+    // last);
     delay(REQUEST_INTERVAL + last - now);
-  // } else {
-  //   Serial.printf("Request duration overflow: %ld..%ld = %ld\n", last, now, now - last);
+    // } else {
+    //   Serial.printf("Request duration overflow: %ld..%ld = %ld\n", last, now,
+    //   now - last);
   }
   last = millis();
 }
@@ -111,16 +131,20 @@ static uint8_t hex2u8(const char *c) {
 }
 
 static uint32_t str2pix(const char *c) {
-  // return pixels.Color(hex2u8(c) >> 4, hex2u8(c + 2) >> 4, hex2u8(c + 4) >> 4);
+  // return pixels.Color(hex2u8(c) >> 4, hex2u8(c + 2) >> 4, hex2u8(c + 4) >>
+  // 4);
   return pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4));
-  // return pixels.gamma32(pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c + 4)));
+  // return pixels.gamma32(pixels.Color(hex2u8(c), hex2u8(c + 2), hex2u8(c +
+  // 4)));
 }
 
 void show_LEDs_hex(const char *hexes) {
   for (int i = 0; i < NUMPIXELS; i++) {
     // pixels.setPixelColor(i, str2pix(hexes + i * 6));
-    pixels.setPixelColor(i, pixels.gamma32(str2pix(hexes + (NUMPIXELS - i - 1) * 6)));
+    pixels.setPixelColor(
+        i, pixels.gamma32(str2pix(hexes + (NUMPIXELS - i - 1) * 6)));
   }
+  pixels.setBrightness(BRIGHTNESS);
   pixels.show();
 }
 
@@ -129,8 +153,10 @@ void show_LEDs(uint8_t *rgb) {
     // pixels.setPixelColor(i,
     //                      pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2]));
     pixels.setPixelColor(NUMPIXELS - i - 1,
-                         pixels.gamma32(pixels.Color(rgb[i*3], rgb[i*3+1], rgb[i*3+2])));
+                         pixels.gamma32(pixels.Color(rgb[i * 3], rgb[i * 3 + 1],
+                                                     rgb[i * 3 + 2])));
   }
+  pixels.setBrightness(BRIGHTNESS);
   pixels.show();
 }
 
@@ -147,11 +173,11 @@ void state_wifi() {
   }
 }
 
-bool http_begin(String url){
+bool http_begin(String url) {
   http.setReuse(false);
   http.end();
-  if (url.startsWith("https://")){
-    return http.begin(url, (const char*)NULL);
+  if (url.startsWith("https://")) {
+    return http.begin(url, (const char *)NULL);
   } else {
     return http.begin(url);
   }
@@ -160,10 +186,10 @@ bool http_begin(String url){
 int request_start() {
   Serial.printf("Request is %d\n", request);
   switch (request) {
-    case REQUEST_GET:
-      return STATE_GET_CONNECT;
-    case REQUEST_UDP:
-      return STATE_UDP_READ;
+  case REQUEST_GET:
+    return STATE_GET_CONNECT;
+  case REQUEST_UDP:
+    return STATE_UDP_READ;
   }
 }
 
@@ -175,28 +201,30 @@ void state_udp_read() {
   // client_udp.begin(8081);
 
   client_udp.beginPacket(BASE_NAME, BASE_UDP_PORT);
-  client_udp.write(0x30);
+  client_udp.write((uint8_t *)&co2, 2);
   client_udp.endPacket();
 
   int count = 10;
   while (client_udp.parsePacket() == 0) {
     if (count-- == 0) {
-      Serial.printf("%06ld (%03d): Didn't get a reply in %dms\n", millis(), millis() - last, REQUEST_INTERVAL);
+      Serial.printf("%06ld (%03d): Didn't get a reply in %dms\n", millis(),
+                    millis() - last, REQUEST_INTERVAL);
       return;
     }
-    delay(REQUEST_INTERVAL/10);
+    delay(REQUEST_INTERVAL / 10);
   }
   int bufLen = NUMPIXELS * 3;
   uint8_t buf[bufLen + 1];
   int res = client_udp.read(buf, bufLen);
   if (res != bufLen) {
-    Serial.printf("%06ld (%03d): Only got %d out of %d bytes\n", millis(), millis() - last, res, bufLen);
+    Serial.printf("%06ld (%03d): Only got %d out of %d bytes\n", millis(),
+                  millis() - last, res, bufLen);
   } else {
     show_LEDs(buf);
   }
 }
 
-void state_get_connect(){
+void state_get_connect() {
   char *url = BASE_URL "/api/get_leds";
   // char *url = "http://1.1.1.1";
   http_begin(url);
@@ -224,8 +252,8 @@ void state_get_request() {
       return;
     }
   } else {
-    Serial.printf("[HTTP] GET... failed, error(%d): %s\n",
-                  httpCode, http.errorToString(httpCode).c_str());
+    Serial.printf("[HTTP] GET... failed, error(%d): %s\n", httpCode,
+                  http.errorToString(httpCode).c_str());
     state = STATE_GET_CONNECT;
     delay(5000);
     return;
@@ -244,11 +272,47 @@ void fetch_button() {
 
     delay(1000);
 
-    if (request == 0){
+    if (request == 0) {
       led.setPixelColor(0, pixels.Color(0, 32, 0));
-    } else if (request == 1){
+    } else if (request == 1) {
       led.setPixelColor(0, pixels.Color(0, 0, 32));
     }
     led.show();
+  }
+}
+
+void setup_co2() {
+  Wire.setPins(25, 21);
+
+  // Init the sensor
+  while (!SCD4X.begin()) {
+    Serial.println("Communication with device failed, please check connection");
+    delay(3000);
+  }
+  Serial.println("Begin ok!");
+  SCD4X.enablePeriodMeasure(SCD4X_STOP_PERIODIC_MEASURE);
+  SCD4X.setTempComp(4.0);
+  SCD4X.setSensorAltitude(54);
+  SCD4X.setAutoCalibMode(true);
+  SCD4X.enablePeriodMeasure(SCD4X_START_PERIODIC_MEASURE);
+
+  Serial.println("Finished setting up CO2 sensor");
+}
+
+#define CO2_PERIOD 1000
+int co2_counter = CO2_PERIOD;
+
+void check_co2() {
+  if (co2_counter++ < CO2_PERIOD) {
+    return;
+  }
+  co2_counter = 0;
+
+  if (SCD4X.getDataReadyStatus()) {
+    DFRobot_SCD4X::sSensorMeasurement_t data;
+    SCD4X.readMeasurement(&data);
+    Serial.println(String("CO2: ") + data.CO2ppm + " - temp: " + data.temp +
+                   " - humid: " + data.humidity);
+    co2 = data.CO2ppm;
   }
 }

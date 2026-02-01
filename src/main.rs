@@ -50,7 +50,7 @@ async fn main() {
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
     {
-        shared_hat.lock().await.show_icon(IconType::Fish);
+        shared_hat.lock().await.show_icon(IconType::Fosdem);
         // shared_hat.lock().await.set_state(HatState::Function);
         // shared_hat.lock().await.start_countdown(1000);
     }
@@ -82,6 +82,8 @@ async fn main() {
 }
 
 async fn udp_server(hat: SharedHat) {
+    use byteorder::{ByteOrder, LittleEndian};
+
     let socket = UdpSocket::bind("0.0.0.0:8081").await.unwrap();
     tracing::info!("UDP server listening on 0.0.0.0:8081");
 
@@ -93,6 +95,8 @@ async fn udp_server(hat: SharedHat) {
                 // Get LED data in binary format
                 let led_data = {
                     let mut hat_guard = hat.lock().await;
+                    let co2 = LittleEndian::read_u16(&buf);
+                    hat_guard.set_co2(co2);
                     hat_guard.get_leds_binary()
                 };
 
@@ -115,7 +119,7 @@ async fn get_leds(State(state): State<AppState>) -> String {
 }
 
 async fn get_icons() -> String {
-    "Empty,Test,Pumpkin,Fish,Pacman,BlackAlps,TiTi,Fosdem".into()
+    "Fosdem,Co2,Empty,Test,Pumpkin,Fish,Pacman,BlackAlps,TiTi".into()
 }
 
 async fn get_status(State(state): State<AppState>) -> Json<HatStatus> {
