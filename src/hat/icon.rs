@@ -121,12 +121,13 @@ impl Icon {
                 );
             }
             IconType::Co2 => {
-                let x = ((time / 5000) % 5) as usize * self.leds.range.0 / 5;
+                let x =
+                    self.leds.range.0 - 1 - ((time / 5000) % 5) as usize * self.leds.range.0 / 5;
                 self.draw_icon(
                     x as f32,
                     0.,
                     CO2,
-                    vec![LED::black(), LED::from_hex("505050")],
+                    vec![LED::black(), LED::from_hex("502020")],
                 );
                 self.leds.set_string(
                     x + 27,
