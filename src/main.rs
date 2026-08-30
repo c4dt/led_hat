@@ -50,7 +50,8 @@ async fn main() {
 
     let shared_hat: SharedHat = Arc::new(Mutex::new(hat::switch::Switch::new(300, 37)));
     {
-        shared_hat.lock().await.show_icon(IconType::Fosdem);
+        shared_hat.lock().await.show_icon(IconType::RSECH26);
+        // shared_hat.lock().await.show_icon(IconType::Fosdem);
         // shared_hat.lock().await.set_state(HatState::Function);
         // shared_hat.lock().await.start_countdown(1000);
     }
