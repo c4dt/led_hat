@@ -120,7 +120,7 @@ async fn get_leds(State(state): State<AppState>) -> String {
 }
 
 async fn get_icons() -> String {
-    "Fosdem,Co2,Empty,Test,Pumpkin,Fish,Pacman,BlackAlps,TiTi".into()
+    "Fosdem,Co2,Empty,Test,Pumpkin,Fish,Pacman,BlackAlps,TiTi,RSECH26".into()
 }
 
 async fn get_status(State(state): State<AppState>) -> Json<HatStatus> {
