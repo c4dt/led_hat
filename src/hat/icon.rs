@@ -92,7 +92,7 @@ impl Icon {
             }
             IconType::RSECH26 => {
                 self.draw_icon(
-                    ((time % 37000) as f64 / 500.) as f32,
+                    ((37000 - (time % 37000)) as f64 / 500.) as f32,
                     0.,
                     RSECH26,
                     vec![LED::black(), LED::from_hex("103030")],
